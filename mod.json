@@ -1,0 +1,9 @@
+{
+    "name": "wallgen",
+    "version": "0.0.19",
+    "label": "Wall generation",
+    "url": "",
+    "description": "wall gen and random map stuff",
+    "dependencies": ["0ad>=0.0.19"],
+    "type": "rmg"
+}
