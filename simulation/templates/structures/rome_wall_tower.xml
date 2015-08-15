@@ -16,6 +16,6 @@
     <Actor>structures/romans/wall_tower.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>8.0</Length>
+    <Length>10</Length>
   </WallPiece>
 </Entity>

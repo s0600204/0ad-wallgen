@@ -8,4 +8,7 @@
     <Icon>structures/palisade_fort.png</Icon>
     <Classes datatype="tokens">Palisade</Classes>
   </Identity>
+  <WallPiece>
+    <Length>8.0</Length>
+  </WallPiece>
 </Entity>

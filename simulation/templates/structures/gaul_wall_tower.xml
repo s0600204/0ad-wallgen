@@ -20,6 +20,6 @@
     <Actor>structures/celts/wall_tower.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>7.0</Length>
+    <Length>8.7</Length>
   </WallPiece>
 </Entity>

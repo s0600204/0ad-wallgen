@@ -16,6 +16,6 @@
     <Actor>structures/ptolemies/wall_tower.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>6.5</Length>
+    <Length>9.0</Length>
   </WallPiece>
 </Entity>

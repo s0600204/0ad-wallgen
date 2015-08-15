@@ -20,6 +20,6 @@
     <FoundationActor>structures/fndn_3x3.xml</FoundationActor>
   </VisualActor>
   <WallPiece>
-    <Length>10.5</Length>
+    <Length>11.8</Length>
   </WallPiece>
 </Entity>

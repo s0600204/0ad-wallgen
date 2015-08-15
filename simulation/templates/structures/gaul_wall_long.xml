@@ -36,6 +36,6 @@
     <Actor>structures/celts/wall_long.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>37.0</Length>
+    <Length>36.6</Length>
   </WallPiece>
 </Entity>

@@ -20,6 +20,6 @@
     <Actor>structures/romans/wall_short.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>13.0</Length>
+    <Length>12.9</Length>
   </WallPiece>
 </Entity>

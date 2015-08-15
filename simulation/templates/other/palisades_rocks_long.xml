@@ -39,6 +39,6 @@
   </VisualActor>
   <TerritoryInfluence disable=""/>
   <WallPiece>
-    <Length>11.0</Length>
+    <Length>14.0</Length>
   </WallPiece>
 </Entity>

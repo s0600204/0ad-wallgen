@@ -27,6 +27,6 @@
     <Actor>structures/celts/wall_gate.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>25.0</Length>
+    <Length>37.0</Length>
   </WallPiece>
 </Entity>

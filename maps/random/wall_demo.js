@@ -66,7 +66,7 @@ var wallStyleList = g_WallStyleList;
 ////////////////////////////////////////
 // Custom wall placement (element based)
 ////////////////////////////////////////
-var wall = ['start', 'long', 'tower', 'medium', 'outpost', 'medium', 'cornerOut', 'medium', 'cornerIn', 'medium', 'house', 'end', 'entryTower', 'start', 'short', 'barracks', 'gate', 'tower', 'medium', 'fort', 'medium', 'end'];
+var wall = ['start', 'long', 'tower', 'tower', 'tower', 'medium', 'outpost', 'medium', 'cornerOut', 'medium', 'cornerIn', 'medium', 'house', 'end', 'entryTower', 'start', 'short', 'barracks', 'gate', 'tower', 'medium', 'fort', 'medium', 'end'];
 for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
 {
 	var startX = actualX + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the first wall element

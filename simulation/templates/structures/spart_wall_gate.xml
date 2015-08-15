@@ -20,6 +20,6 @@
     <Actor>structures/hellenes/wall_gate.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>38.0</Length>
+    <Length>35.4</Length>
   </WallPiece>
 </Entity>
