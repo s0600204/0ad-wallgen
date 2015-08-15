@@ -89,6 +89,24 @@
 			"Special": "Can be built in neutral and enemy territory to strangle enemy towns." 
 		} 
 	],
+	"WallSets":
+	{
+		"Palisades":
+		{
+			"Template": "other/wallset_palisade",
+			"Scale": 0.55
+		},
+		"Stone":
+		{
+			"Template": "structures/athen_wallset_stone",
+			"Scale": 1.5
+		},
+		"Siege":
+		{
+			"Template": "structures/rome_wallset_siege",
+			"Scale": 1.5
+		}
+	},
 	"StartEntities":
 	[
 		{

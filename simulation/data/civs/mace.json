@@ -114,6 +114,19 @@
 			"Special":"Constructs and upgrades all Macedonian siege engines."
 		}
 	],
+	"WallSets":
+	{
+		"Palisades":
+		{
+			"Template": "other/wallset_palisade",
+			"Scale": 0.55
+		},
+		"Stone":
+		{
+			"Template": "structures/athen_wallset_stone",
+			"Scale": 1.5
+		}
+	},
 	"StartEntities":
 	[
 		{

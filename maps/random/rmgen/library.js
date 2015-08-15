@@ -6,12 +6,22 @@
 const PI = Math.PI;
 const TWO_PI = 2 * Math.PI;
 const TERRAIN_SEPARATOR = "|";
-const SEA_LEVEL = 20.0;
+const SEA_LEVEL = 160.0;
 const CELL_SIZE = 4;
 const HEIGHT_UNITS_PER_METRE = 92;
 const MIN_MAP_SIZE = 128;
 const MAX_MAP_SIZE = 512;
 const FALLBACK_CIV = "athen";
+// Constants needed for heightmap_manipulation.js
+const MAX_HEIGHT_RANGE = 0xFFFF / HEIGHT_UNITS_PER_METRE // Engine limit, Roughly 700 meters
+const MIN_HEIGHT = - SEA_LEVEL;
+const MAX_HEIGHT = MAX_HEIGHT_RANGE - SEA_LEVEL;
+// Entity template structure keys that might change, for easier mod support
+const STARTING_ENTITY_KEY = "StartEntities";
+const START_ENTITY_TEMPLATE_PATH_KEY = "Template"
+const BUILDER_TEMPLATEPATH_KEYS = ["Builder", "Entities", "_string"];
+const PRODUCTION_TEMPLATEPATH_KEYS = ["ProductionQueue", "Entities", "_string"];
+const CIV_PLACEHOLDER_STRING = "{civ}";
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //	Utility functions
@@ -394,13 +404,130 @@ function getNumPlayers()
 	return g_MapSettings.PlayerData.length - 1;
 }
 
+// Takes nothing, returns an array of strings representing all available civilizations
+function getCivList()
+{
+	var raw_civData = RMS.GetCivData();
+	var civList = [];
+	for (var i = 0; i < raw_civData.length; ++i)
+		civList.push(JSON.parse(raw_civData[i]).Code);
+	
+	return civList;
+}
+
+// Takes nothing, returns an associative array with civ strings as keys containing all unpacked civ data (Templates need to be unpacked with RMS.GetTemplate() if needed)
+function getFullCivData()
+{
+	var rawCivData = RMS.GetCivData();
+	var unpackedCivData = {};
+	for (var i = 0; i < rawCivData.length; i++)
+	{
+		var singleCivData = JSON.parse(rawCivData[i]);
+		unpackedCivData[singleCivData.Code] = singleCivData;
+	}
+	
+	return unpackedCivData;
+}
+
+// Takes a player number (0-7, so Gaia excluded). Returns this players civ string
+// ToDo: If the player number is to high an error will occur (and the fallback won't be reached)!
 function getCivCode(player)
 {
 	if (g_MapSettings.PlayerData[player+1].Civ)
 		return g_MapSettings.PlayerData[player+1].Civ;
 
-	warn("undefined civ specified for player " + (player + 1) + ", falling back to '" + FALLBACK_CIV + "'");
+	warn("Undefined civ specified for player " + (player + 1) + ", falling back to '" + FALLBACK_CIV + "'");
 	return FALLBACK_CIV;
+}
+
+// Takes an entity path and a key list to get the templates value
+function getTemplateValue(entPath, key_list)
+{
+	var subdata = RMS.GetTemplate(entPath);
+	for (var i = 0; i < key_list.length; i++)
+	{
+		if (key_list[i] in subdata)
+		{
+			subdata = subdata[key_list[i]];
+		}
+		else
+		{
+			return false;
+		}
+	}
+	return subdata;
+}
+
+// Returns a list of all templates paths available to the given civ
+function getTempatePathList(civ)
+{
+	var templatePaths = getFullCivData();
+	if (civ in templatePaths)
+	{
+		templatePaths = templatePaths[civ];
+	}
+	else
+	{
+		var keys = [];
+		for (var key in templatePaths)
+			keys.push(key);
+		warn("getTempatePathList: Unknown civ: " + civ + " not in " + uneval(keys));
+		return false;
+	}
+	if (STARTING_ENTITY_KEY in templatePaths)
+	{
+		templatePaths = templatePaths[STARTING_ENTITY_KEY];
+	}
+	else
+	{
+		var keys = [];
+		for (var key in templatePaths)
+			keys.push(key);
+		warn("getTempatePathList: Civ has no starting entities as defined in STARTING_ENTITY_KEY (" + STARTING_ENTITY_KEY + "): " + uneval(keys));
+		return false;
+	}
+	for (var i = 0; i < templatePaths.length; i++)
+	{
+		if (START_ENTITY_TEMPLATE_PATH_KEY in templatePaths[i])
+		{
+			templatePaths[i] = templatePaths[i][START_ENTITY_TEMPLATE_PATH_KEY];
+		}
+		else
+		{
+			var keys = [];
+			for (var key in templatePaths[i])
+				keys.push(key);
+			warn("getTempatePathList: Starting entity list item has no template as defined in START_ENTITY_TEMPLATE_PATH_KEY (" + START_ENTITY_TEMPLATE_PATH_KEY + "): " + uneval(keys));
+			return false;
+		}
+	}
+	var foundNew = 1;
+	while (foundNew > 0)
+	{
+		foundNew = 0;
+		var methods = [BUILDER_TEMPLATEPATH_KEYS, PRODUCTION_TEMPLATEPATH_KEYS];
+		for (var m = 0; m < methods.length; m++)
+		{
+			for (var t = 0; t < templatePaths.length; t++)
+			{
+				var pathsToCheck = getTemplateValue(templatePaths[t], methods[m]);
+				if (typeof(pathsToCheck) === typeof(""))
+				{
+					pathsToCheck = pathsToCheck.split(/\s+/);
+					for (var c = 0; c < pathsToCheck.length; c++)
+					{
+						var actualPath = pathsToCheck[c].replace(CIV_PLACEHOLDER_STRING, civ);
+						if (templatePaths.indexOf(actualPath) == -1 && RMS.TemplateExists(actualPath))
+						{
+							templatePaths.push(actualPath);
+							foundNew++;
+						}
+					}
+				}
+			}
+		}
+	}
+	return templatePaths;
 }
 
 function areAllies(player1, player2)

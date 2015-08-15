@@ -85,6 +85,19 @@
 			"Special": "Defensive Aura - Gives all Iberian units and buildings within vision range of the monument a 10-15% attack boost. Build Limit: Only 5 may be built per map."
 		} 
 	],
+	"WallSets":
+	{
+		"Palisades":
+		{
+			"Template": "other/wallset_palisade",
+			"Scale": 0.55
+		},
+		"Stone":
+		{
+			"Template": "structures/athen_wallset_stone",
+			"Scale": 1.5
+		}
+	},
 	"StartEntities":
 	[
 		{

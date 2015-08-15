@@ -43,6 +43,6 @@
     <Actor>structures/romans/siege_wall_tower.xml</Actor>
   </VisualActor>
   <WallPiece>
-    <Length>6.0</Length>
+    <Length>5.5</Length>
   </WallPiece>
 </Entity>

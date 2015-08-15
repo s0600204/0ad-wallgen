@@ -94,6 +94,19 @@
 			"Special":"Contentment: +10% Health and +10% resource gathering rates for all citizens and allied citizens within its range. Can be built anywhere except in enemy territory. Max Built: 10."
 		}
 	],
+	"WallSets":
+	{
+		"Palisades":
+		{
+			"Template": "other/wallset_palisade",
+			"Scale": 0.55
+		},
+		"Stone":
+		{
+			"Template": "structures/athen_wallset_stone",
+			"Scale": 1.5
+		}
+	},
 	"StartEntities":
 	[
 		{

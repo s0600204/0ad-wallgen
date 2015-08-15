@@ -21,10 +21,6 @@ var mapSize = getMapSize();
 // Heightmap functionality
 //////////
 
-// Some general heightmap settings
-const MIN_HEIGHT = - SEA_LEVEL; // 20, should be set in the libs!
-const MAX_HEIGHT = 0xFFFF/HEIGHT_UNITS_PER_METRE - SEA_LEVEL; // A bit smaler than 90, should be set in the libs!
-
 // Add random heightmap generation functionality
 function getRandomReliefmap(minHeight, maxHeight)
 {

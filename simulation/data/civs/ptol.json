@@ -113,6 +113,19 @@
 			"Special":"When built along the shoreline, removes shroud of darkness over all the water, revealing all the coast lines on the map. Limit: 1."
 		}
 	],
+	"WallSets":
+	{
+		"Palisades":
+		{
+			"Template": "other/wallset_palisade",
+			"Scale": 0.55
+		},
+		"Stone":
+		{
+			"Template": "structures/athen_wallset_stone",
+			"Scale": 1.5
+		}
+	},
 	"StartEntities":
 	[
 		{

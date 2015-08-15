@@ -62,20 +62,26 @@ var buildableMapSize = mapSize - 2 * distToMapBorder;
 var actualX = distToMapBorder;
 var actualY = distToMapBorder;
 // Wall styles are chosen by strings so the civ strings got by getCivCode() can be used
-// Other styles may be present as well but besides the civ styles only 'palisades' includes all wall element types (yet)
-const wallStyleList = ["athen", "brit", "cart", "gaul", "iber", "mace", "maur", "pers", "ptol", "rome", "sele", "spart", "rome_siege", "palisades"];
+var wallStyleList = getCivList();
+// Other styles may be available as well...
+wallStyleList.push("rome_siege");
+wallStyleList.push("palisades");
+// Check if all wall styles are present and remove unknown ones
+for (var i = 0; i < wallStyleList.length; i++)
+	if (!wallStyles.hasOwnProperty(wallStyleList[i]))
+		wallStyleList.splice(i, 1);
 
 
 ////////////////////////////////////////
 // Custom wall placement (element based)
 ////////////////////////////////////////
-var wall = ['endLeft', 'wallLong', 'tower', 'wall', 'outpost', 'wall', 'cornerOut', 'wall', 'cornerIn', 'wall', 'house', 'endRight', 'entryTower', 'endLeft', 'wallShort', 'barracks', 'gate', 'tower', 'wall', 'wallFort', 'wall', 'endRight'];
+var wall = ['endLeft', 'wallLong', 'tower', 'tower', 'tower', 'wall', 'outpost', 'wall', 'cornerOut', 'wall', 'cornerIn', 'wall', 'house', 'endRight', 'entryTower', 'endLeft', 'wallShort', 'barracks', 'gate', 'tower', 'wall', 'endRight'];
 for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
 {
 	var startX = actualX + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the first wall element
 	var startY = actualY; // Y coordinate of the first wall element
-	var style = wallStyleList[styleIndex]; // // The wall's style like 'cart', 'iber', 'pers', 'rome', 'romeSiege' or 'palisades'
-	var orientation = styleIndex * PI/64; // Orientation of the first wall element. 0 means 'outside' or 'front' is right (positive X, like object placement)
+	var style = wallStyleList[styleIndex]; // The wall's style like 'cart', 'iber', 'pers', 'rome', 'romeSiege' or 'palisades'
+	var orientation = PI/16 * sin(styleIndex * PI/4); // Orientation of the first wall element. 0 means 'outside' or 'front' is right (positive X, like object placement in Atlas)
 	// That means the wall will be build towards top (positive Y) if no corners are used
 	var playerId = 0; // Owner of the wall (like in placeObject). 0 is Gaia, 1 is Player 1 (default color blue), ...
 	placeWall(startX, startY, wall, style, playerId, orientation); // Actually placing the wall
@@ -155,7 +161,7 @@ for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
 {
 	for (var wallIndex = 0; wallIndex < numWallsPerStyle; wallIndex++)
 	{
-		var startX = actualX + (styleIndex * numWallsPerStyle + wallIndex) * distToOtherWalls; // X coordinate the wall will start from
+		var startX = actualX + (styleIndex * numWallsPerStyle + wallIndex) * buildableMapSize/wallStyleList.length/numWallsPerStyle; // X coordinate the wall will start from
 		var startY = actualY; // Y coordinate the wall will start from
 		var endX = startX; // X coordinate the wall will end
 		var endY = actualY + (wallIndex + 1) * maxWallLength/numWallsPerStyle; // Y coordinate the wall will end
@@ -167,8 +173,6 @@ for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
 		// placeObject(endX, endY, 'other/obelisk', 0, 0*PI); // Place visual marker to see where exsactly the wall ends
 	}
 }
-actualX = distToMapBorder; // Reset actualX
-actualY += maxWallLength + distToOtherWalls; // Increase actualY for next wall placement method
 
 
 // Export map data

@@ -131,7 +131,7 @@ var playerAngleMaxOff = playerAngleAddAvrg/4;
 // Setup paths
 var pathSucsessRadius = baseRadius/2;
 var pathAngleOff = PI/2;
-var pathWidth = 10; // This is not really the path's thickness in tiles but the number of tiles in the clumbs of the path
+var pathWidth = 10; // This is not really the path's thickness in tiles but the number of tiles in the clumps of the path
 
 // Setup additional resources
 var resourceRadius = 2*mapRadius/3; // 3*mapRadius/8;
@@ -231,10 +231,6 @@ function getOrderOfPointsForShortestClosePath(points)
 //  Heightmap functionality
 //
 ////////////////
-
-// Some heightmap constants
-const MIN_HEIGHT = - SEA_LEVEL; // -20
-const MAX_HEIGHT = 0xFFFF/HEIGHT_UNITS_PER_METRE - SEA_LEVEL; // A bit smaller than 90
 
 // Get the diferrence between minimum and maxumum height
 function getMinAndMaxHeight(reliefmap)

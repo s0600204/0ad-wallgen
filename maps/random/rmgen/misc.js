@@ -157,17 +157,17 @@ function createStartingPlayerEntities(fx, fz, playerid, civEntities, BUILDING_AN
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // placeCivDefaultEntities
 //
 //	Creates the default starting player entities depending on the players civ
 //	fx&fy: position of player base
 //	playerid: id of player
 //	angle: angle of main base building, optional, default is BUILDING_ANGlE
-//	kwargs: Takes some optional keyword arguments to tweek things
-//		'iberWall': may be false, 'walls' (default) or 'towers'. Determines the defensive structures Iberians get as civ bonus
+//	kwargs: Optional. Takes an associative array with keyword arguments to tweak things:
+//		Known keys: 'iberWall': may be false, 'walls' (default) or 'towers'. Determines the defensive structures Iberians get as civ bonus
 //
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function placeCivDefaultEntities(fx, fz, playerid, angle, kwargs)
 {
 	// Unpack kwargs
