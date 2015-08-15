@@ -4,7 +4,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 const PI = Math.PI;
-const TWO_PI = 2 * Math.PI;
+const TWO_PI = 2 * Math.PI; // mathematically known as 'tau'
 const TERRAIN_SEPARATOR = "|";
 const SEA_LEVEL = 160.0;
 const CELL_SIZE = 4;

@@ -251,6 +251,7 @@ function GetTemplateDataHelper(template, player)
 			"templates": {
 				"tower": template.WallSet.Templates.Tower,
 				"gate": template.WallSet.Templates.Gate,
+				"fort": template.WallSet.Templates.Fort || "structures/{civ}_fortress",
 				"long": template.WallSet.Templates.WallLong,
 				"medium": template.WallSet.Templates.WallMedium,
 				"short": template.WallSet.Templates.WallShort,
@@ -258,10 +259,21 @@ function GetTemplateDataHelper(template, player)
 			"maxTowerOverlap": +template.WallSet.MaxTowerOverlap,
 			"minTowerOverlap": +template.WallSet.MinTowerOverlap,
 		};
+		if (template.WallSet.Templates.WallEnd)
+			ret.wallSet.templates.end = template.WallSet.Templates.WallEnd;
+		if (template.WallSet.Templates.WallCurveQuarter)
+			ret.wallSet.templates.quarterCurve = template.WallSet.Templates.WallCurveQuarter;
+		if (template.WallSet.Templates.WallCurveEighth)
+			ret.wallSet.templates.eighthCurve = template.WallSet.Templates.WallCurveEighth;
 	}
 
 	if (template.WallPiece)
-		ret.wallPiece = {"length": +template.WallPiece.Length};
+		ret.wallPiece = {
+			"length": +template.WallPiece.Length,
+			"angle": +(template.WallPiece.Orientation || 1) * Math.PI,
+			"indent": +(template.WallPiece.Indent || 0),
+			"bend": +(template.WallPiece.Bend || 0) * Math.PI,
+		};
 
 	return ret;
 }

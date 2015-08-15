@@ -33,29 +33,43 @@
 // ?Think of something to enable splitting walls into two walls so more complex walls can be build and roads can have branches/crossroads?
 // ?Readjust placement angle for wall elements with bending when used in linear/circular walls by their bending?
 
+/**
+ * Set some globals for this module
+ */
+var g_WallStyles = {};
+var g_WallStyleList = [];
+var g_CivData = getFullCivData();
+var g_CivList = Object.keys(g_CivData);
+var g_FortressTypes = {};
+var g_FortressTypeKeys = ["tiny", "small", "medium", "normal", "large", "veryLarge", "giant"];
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  WallElement class definition
-//
-//	Concept: If placed unrotated the wall's build direction is towards positive Y (top) with "outside" right (+X) and "inside" left (-X) like unrotated entities has their drop-points right (in rmgen)
-//	The build direction of the wall will be changed by corners (bending != 0) and so the "inside"/"outside" direction
-//
-//	type	Identification string.
-//	entPath	Optional. Template entity path string of the entity to be placed, example: "structures/cart_wall_long". Default is undefined (No entity placed)
-//	angle	Optional. Relative angle to the build direction. Default is 0
-//	width	Optional. How far this wall element lengthens the wall (float), if unrotated the Y space needed. Default is 0
-//	indent	Optional. The lateral indentation of the entity, drawn "inside" (positive values) or pushed "outside" (negative values). Default is 0
-//	bending	Optional. How the build direction of the wall is changed after this element, positive is bending "in"/left/counter clockwise (like entity placement)
-//		NOTE: Bending is not supported by all placement functions (see there)
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function WallElement(type, entPath, angle, width, indent, bending)
+/**
+ * Basic Initialisation
+ * 
+ * Fetches wallsets from {civ}.json files, and then uses them to load
+ * basic wall elements
+ */
+for (let civ of g_CivList)
 {
-	this.type = type;
-	this.entPath = entPath;
-	this.angle = (angle !== undefined) ? angle : 0;
-	this.width = (width !== undefined) ? width : 0;
-	this.indent = (indent !== undefined) ? indent : 0;
-	this.bending = (bending !== undefined) ? bending : 0;
+	let civInfo = g_CivData[civ];
+	if (!civInfo.WallSets)
+		continue;
+
+	for (let path of civInfo.WallSets)
+	{
+		let style = path.split("/")[1].split("_");
+		style = (style[0]=="wallset") ? style[1] : style[0]+"_"+style[2];
+
+		if (g_WallStyleList.indexOf(style) == -1)
+		{
+			g_WallStyleList.push(style);
+			g_WallStyles[style] = {};
+			let wallset = GetTemplateDataHelper(RMS.GetTemplate(path)).wallSet;
+			for (let element in wallset.templates)
+				setWallElement(style, element, wallset.templates[element].replace("{civ}",civ))
+			g_WallStyles[style]["@overlap"] = wallset.minTowerOverlap * getWallElement(style, "tower").length;
+		}
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,251 +86,240 @@ function WallElement(type, entPath, angle, width, indent, bending)
 function Fortress(type, wall, centerToFirstElement)
 {
 	this.type = type;
-	this.wall = (wall !== undefined) ? wall : [];
-	this.centerToFirstElement = undefined;
+	this.wall = wall || [];
+	this.centerToFirstElement = centerToFirstElement || undefined;
 }
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  wallStyles data structure for default wall styles
-//
-//	A wall style is an associative array with all wall elements of that style in it associated with the wall element type string
-//	wallStyles holds all the wall styles within an associative array with the civ string or another descriptive strings as key
-//	Examples: "athen", "rome_siege", "palisades", "fence", "road"
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-var wallStyles = {};
-
-// Get wall element width by template file path and angle
-function getTemplateWidthByAngle(entPath, angle)
-{
-	var template = RMS.GetTemplate(entPath);
-	var width = getTemplateValue(entPath, ["WallPiece", "Length"]) / CELL_SIZE;
-	
-	return width;
-}
-
-// Add new WallElement by it's properties
-function addNewWallElement(style, type, angle)
-{
-	var templatePath = "structures/" + style + "_" + type
-	wallStyles[style][type] = new WallElement(type, templatePath, angle, getTemplateWidthByAngle(templatePath, angle));
-}
-
-// Find all wall sets by civ to be then put into wallStyles
-var entitiesByCiv = {};
-var civList = getCivList();
-for (var i = 0; i < civList.length; i++)
-{
-	var civ = civList[i];
-	var templatePathList = getTempatePathList(civ);
-	entitiesByCiv[civ] = templatePathList;
-}
-
-// Generic civ dependent wall style definition. Some, e.g. "rome_siege" needs tweaking...
-var wallScaleByType = {}; // To be removed TODO
-var civData = getFullCivData();
-for (var i = 0; i < civList.length; i++)
-{
-	var civ = civList[i];
-	var wallSets = civData[civ].WallSets;
-	if (wallSets.hasOwnProperty("Stone"))
-		wallScaleByType[civ] = wallSets.Stone.Scale;
-}
-// Non-civ but civ specific wall styles
-wallScaleByType.rome_siege = 1.5;
-for (var style in wallScaleByType)
-{
-	var civ = style;
-	if (style == "rome_siege")
-		civ = "rome";
-	wallStyles[style] = {};
-	// Default wall elements
-	var templatePath = "structures/" + style + "_wall_tower";
-	var angle = PI;
-	var width = getTemplateWidthByAngle(templatePath, angle); // DEBUG
-	log("getTemplateWidthByAngle(" + templatePath + ") =  " + width + ", used to be width = " + wallScaleByType[style]); // DEBUG
-	// wallStyles[style]["tower"] = new WallElement("tower", templatePath, angle, width);//wallScaleByType[style]);
-	addNewWallElement(style, "wall_tower", PI);
-	wallStyles[style]["tower"] = wallStyles[style]["wall_tower"]; // Shortcut
-	
-	wallStyles[style]["endLeft"] = new WallElement("endLeft", "structures/" + style + "_wall_tower", PI, wallScaleByType[style]); // Same as tower. To be compatible with palisades...
-	wallStyles[style]["endRight"] = new WallElement("endRight", "structures/" + style + "_wall_tower", PI, wallScaleByType[style]); // Same as tower. To be compatible with palisades...
-	wallStyles[style]["cornerIn"] = new WallElement("cornerIn", "structures/" + style + "_wall_tower", 5*PI/4, 0, 0.35*wallScaleByType[style], PI/2); // 2^0.5 / 4 ~= 0.35 ~= 1/3
-	wallStyles[style]["cornerOut"] = new WallElement("cornerOut", "structures/" + style + "_wall_tower", 3*PI/4, 0.71*wallScaleByType[style], 0, -PI/2); // // 2^0.5 / 2 ~= 0.71 ~= 2/3
-	
-	var templatePath = "structures/" + style + "_wall_short"; // DEBUG
-	var angle = 0*PI; // DEBUG
-	var width = getTemplateWidthByAngle(templatePath, angle); // DEBUG
-	log("getTemplateWidthByAngle(" + templatePath + ") =  " + width + ", used to be width = " + 2*wallScaleByType[style]); // DEBUG
-	wallStyles[style]["wallShort"] = new WallElement("wallShort", "structures/" + style + "_wall_short", 0*PI, 2*wallScaleByType[style]);
-	
-	var templatePath = "structures/" + style + "_wall_medium"; // DEBUG
-	var angle = 0*PI; // DEBUG
-	var width = getTemplateWidthByAngle(templatePath, angle); // DEBUG
-	log("getTemplateWidthByAngle(" + templatePath + ") =  " + width + ", used to be width = " + 4*wallScaleByType[style]); // DEBUG
-	wallStyles[style]["wall"] = new WallElement("wall", "structures/" + style + "_wall_medium", 0*PI, 4*wallScaleByType[style]);
-	
-	wallStyles[style]["wallMedium"] = new WallElement("wall", "structures/" + style + "_wall_medium", 0*PI, 4*wallScaleByType[style]);
-	
-	var templatePath = "structures/" + style + "_wall_long"; // DEBUG
-	var angle = 0*PI; // DEBUG
-	var width = getTemplateWidthByAngle(templatePath, angle); // DEBUG
-	log("getTemplateWidthByAngle(" + templatePath + ") =  " + width + ", used to be width = " + 6*wallScaleByType[style]); // DEBUG
-	wallStyles[style]["wallLong"] = new WallElement("wallLong", "structures/" + style + "_wall_long", 0*PI, 6*wallScaleByType[style]);
-	
-	// Gate and entrance wall elements
-	var gateWidth = 6*wallScaleByType[style];
-	
-	var templatePath = "structures/" + style + "_wall_gate"; // DEBUG
-	var angle = PI; // DEBUG
-	var width = getTemplateWidthByAngle(templatePath, angle); // DEBUG
-	log("getTemplateWidthByAngle(" + templatePath + ") =  " + width + ", used to be width = " + 6*wallScaleByType[style]); // DEBUG
-	wallStyles[style]["gate"] = new WallElement("gate", "structures/" + style + "_wall_gate", PI, gateWidth);
-	
-	wallStyles[style]["entry"] = new WallElement("entry", undefined, 0*PI, gateWidth);
-	wallStyles[style]["entryTower"] = new WallElement("entryTower", "structures/" + civ + "_defense_tower", PI, gateWidth, -4*wallScaleByType[style]);
-	wallStyles[style]["entryFort"] = new WallElement("entryFort", "structures/" + civ + "_fortress", 0*PI, 8*wallScaleByType[style], 6*wallScaleByType[style]);
-	// Defensive wall elements with 0 width outside the wall
-	wallStyles[style]["outpost"] = new WallElement("outpost", "structures/" + civ + "_outpost", PI, 0, -4*wallScaleByType[style]);
-	wallStyles[style]["defenseTower"] = new WallElement("defenseTower", "structures/" + civ + "_defense_tower", PI, 0, -4*wallScaleByType[style]);
-	// Base buildings wall elements with 0 width inside the wall
-	wallStyles[style]["barracks"] = new WallElement("barracks", "structures/" + civ + "_barracks", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["civilCentre"] = new WallElement("civilCentre", "structures/" + civ + "_civil_centre", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["farmstead"] = new WallElement("farmstead", "structures/" + civ + "_farmstead", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["field"] = new WallElement("field", "structures/" + civ + "_field", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["fortress"] = new WallElement("fortress", "structures/" + civ + "_fortress", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["house"] = new WallElement("house", "structures/" + civ + "_house", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["market"] = new WallElement("market", "structures/" + civ + "_market", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["storehouse"] = new WallElement("storehouse", "structures/" + civ + "_storehouse", PI, 0, 4.5*wallScaleByType[style]);
-	wallStyles[style]["temple"] = new WallElement("temple", "structures/" + civ + "_temple", PI, 0, 4.5*wallScaleByType[style]);
-	// Generic space/gap wall elements
-	wallStyles[style]["space1"] = new WallElement("space1", undefined, 0*PI, wallScaleByType[style]);
-	wallStyles[style]["space2"] = new WallElement("space2", undefined, 0*PI, 2*wallScaleByType[style]);
-	wallStyles[style]["space3"] = new WallElement("space3", undefined, 0*PI, 3*wallScaleByType[style]);
-	wallStyles[style]["space4"] = new WallElement("space4", undefined, 0*PI, 4*wallScaleByType[style]);
-}
-// Adjust "rome_siege" style
-wallStyles["rome_siege"]["house"] = new WallElement("house", "structures/rome_tent", PI, 0, 4);
-
-// Add special wall styles not well to implement generic (and to show how custom styles can be added)
-
-// Add wall style "palisades"
-wallScaleByType["palisades"] = 0.55;
-wallStyles["palisades"] = {};
-wallStyles["palisades"]["wall"] = new WallElement("wall", "other/palisades_rocks_medium", 0*PI, 2.3);
-wallStyles["palisades"]["wallMedium"] = new WallElement("wall", "other/palisades_rocks_medium", 0*PI, 2.3);
-wallStyles["palisades"]["wallLong"] = new WallElement("wall", "other/palisades_rocks_long", 0*PI, 3.5);
-wallStyles["palisades"]["wallShort"] = new WallElement("wall", "other/palisades_rocks_short", 0*PI, 1.2);
-wallStyles["palisades"]["tower"] = new WallElement("tower", "other/palisades_rocks_tower", -PI/2, 0.7);
-// wallStyles["palisades"]["wallFort"] = new WallElement("wallFort", "other/palisades_rocks_fort", PI, 1.7);
-wallStyles["palisades"]["gate"] = new WallElement("gate", "other/palisades_rocks_gate", PI, 3.6);
-wallStyles["palisades"]["entry"] = new WallElement("entry", undefined, wallStyles["palisades"]["gate"].angle, wallStyles["palisades"]["gate"].width);
-wallStyles["palisades"]["entryTower"] = new WallElement("entryTower", "other/palisades_rocks_watchtower", 0*PI, wallStyles["palisades"]["gate"].width, -3);
-wallStyles["palisades"]["entryFort"] = new WallElement("entryFort", "other/palisades_rocks_fort", PI, 6, 3);
-wallStyles["palisades"]["cornerIn"] = new WallElement("cornerIn", "other/palisades_rocks_curve", 3*PI/4, 2.1, 0.7, PI/2);
-wallStyles["palisades"]["cornerOut"] = new WallElement("cornerOut", "other/palisades_rocks_curve", 5*PI/4, 2.1, -0.7, -PI/2);
-wallStyles["palisades"]["outpost"] = new WallElement("outpost", "other/palisades_rocks_outpost", PI, 0, -2);
-wallStyles["palisades"]["house"] = new WallElement("house", "other/celt_hut", PI, 0, 5);
-wallStyles["palisades"]["barracks"] = new WallElement("barracks", "structures/gaul_tavern", PI, 0, 5);
-wallStyles["palisades"]["endRight"] = new WallElement("endRight", "other/palisades_rocks_end", -PI/2, 0.2);
-wallStyles["palisades"]["endLeft"] = new WallElement("endLeft", "other/palisades_rocks_end", PI/2, 0.2);
-
-// Add special wall style "road"
-// NOTE: This is not a wall style in the common sense. Use with care!
-wallStyles["road"] = {};
-wallStyles["road"]["short"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_short.xml", PI/2, 4.5);
-wallStyles["road"]["long"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_long.xml", PI/2, 9.5);
-wallStyles["road"]["cornerLeft"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_corner.xml", -PI/2, 4.5-2*1.25, 1.25, PI/2); // Correct width by -2*indent to fit xStraicht/corner
-wallStyles["road"]["cornerRight"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_corner.xml", 0*PI, 4.5-2*1.25, -1.25, -PI/2); // Correct width by -2*indent to fit xStraicht/corner
-wallStyles["road"]["curveLeft"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_curve_small.xml", -PI/2, 4.5+2*0.2, -0.2, PI/2); // Correct width by -2*indent to fit xStraicht/corner
-wallStyles["road"]["curveRight"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_curve_small.xml", 0*PI, 4.5+2*0.2, 0.2, -PI/2); // Correct width by -2*indent to fit xStraicht/corner
-wallStyles["road"]["start"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_end.xml", PI/2, 2);
-wallStyles["road"]["end"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_end.xml", -PI/2, 2);
-wallStyles["road"]["xStraight"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_intersect_x.xml", 0*PI, 4.5);
-wallStyles["road"]["xLeft"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_intersect_x.xml", 0*PI, 4.5, 0, PI/2);
-wallStyles["road"]["xRight"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_intersect_x.xml", 0*PI, 4.5, 0, -PI/2);
-wallStyles["road"]["tLeft"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_intersect_T.xml", PI, 4.5, 1.25);
-wallStyles["road"]["tRight"] = new WallElement("road", "actor|props/special/eyecandy/road_temperate_intersect_T.xml", 0*PI, 4.5, -1.25);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  fortressTypes data structure for some default fortress types
+//  g_FortressTypes data structure for some default fortress types (defined above)
 //
 //	A fortress type is just an instance of the Fortress class with actually something in it
 //	fortressTypes holds all the fortresses within an associative array with a descriptive string as key (e.g. matching the map size)
 //	Examples: "tiny", "veryLarge"
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-var fortressTypes = {};
-// Setup some default fortress types
-// Add fortress type "tiny"
-fortressTypes["tiny"] = new Fortress("tiny");
-var wallPart = ["gate", "tower", "wallShort", "cornerIn", "wallShort", "tower"];
-fortressTypes["tiny"].wall = wallPart.concat(wallPart, wallPart, wallPart);
-// Add fortress type "small"
-fortressTypes["small"] = new Fortress("small");
-var wallPart = ["gate", "tower", "wall", "cornerIn", "wall", "tower"];
-fortressTypes["small"].wall = wallPart.concat(wallPart, wallPart, wallPart);
-// Add fortress type "medium"
-fortressTypes["medium"] = new Fortress("medium");
-var wallPart = ["gate", "tower", "wallLong", "cornerIn", "wallLong", "tower"];
-fortressTypes["medium"].wall = wallPart.concat(wallPart, wallPart, wallPart);
-// Add fortress type "normal"
-fortressTypes["normal"] = new Fortress("normal");
-var wallPart = ["gate", "tower", "wall", "cornerIn", "wall", "cornerOut", "wall", "cornerIn", "wall", "tower"];
-fortressTypes["normal"].wall = wallPart.concat(wallPart, wallPart, wallPart);
-// Add fortress type "large"
-fortressTypes["large"] = new Fortress("large");
-var wallPart = ["gate", "tower", "wallLong", "cornerIn", "wallLong", "cornerOut", "wallLong", "cornerIn", "wallLong", "tower"];
-fortressTypes["large"].wall = wallPart.concat(wallPart, wallPart, wallPart);
-// Add fortress type "veryLarge"
-fortressTypes["veryLarge"] = new Fortress("veryLarge");
-var wallPart = ["gate", "tower", "wall", "cornerIn", "wall", "cornerOut", "wallLong", "cornerIn", "wallLong", "cornerOut", "wall", "cornerIn", "wall", "tower"];
-fortressTypes["veryLarge"].wall = wallPart.concat(wallPart, wallPart, wallPart);
-// Add fortress type "giant"
-fortressTypes["giant"] = new Fortress("giant");
-var wallPart = ["gate", "tower", "wallLong", "cornerIn", "wallLong", "cornerOut", "wallLong", "cornerIn", "wallLong", "cornerOut", "wallLong", "cornerIn", "wallLong", "tower"];
-fortressTypes["giant"].wall = wallPart.concat(wallPart, wallPart, wallPart);
+
+// Set some default fortress types
+for (let key of g_FortressTypeKeys)
+	g_FortressTypes[key] = new Fortress(key);
+
+g_FortressTypes["tiny"].wall = ["gate", "tower", "short", "cornerIn", "short", "tower"];
+g_FortressTypes["small"].wall = ["gate", "tower", "medium", "cornerIn", "medium", "tower"];
+g_FortressTypes["medium"].wall = ["gate", "tower", "long", "cornerIn", "long", "tower"];
+g_FortressTypes["normal"].wall = ["gate", "tower", "medium", "cornerIn", "medium", "cornerOut", "medium", "cornerIn", "medium", "tower"];
+g_FortressTypes["large"].wall = ["gate", "tower", "long", "cornerIn", "long", "cornerOut", "long", "cornerIn", "long", "tower"];
+g_FortressTypes["veryLarge"].wall = ["gate", "tower", "medium", "cornerIn", "medium", "cornerOut", "long", "cornerIn", "long", "cornerOut", "medium", "cornerIn", "medium", "tower"];
+g_FortressTypes["giant"].wall = ["gate", "tower", "long", "cornerIn", "long", "cornerOut", "long", "cornerIn", "long", "cornerOut", "long", "cornerIn", "long", "tower"];
+
+for (let type in g_FortressTypes)
+{
+	let wallPart = g_FortressTypes[type].wall;
+	g_FortressTypes[type].wall = wallPart.concat(wallPart, wallPart, wallPart);
+}
 
 // Setup some better looking semi default fortresses for "palisades" style
-var fortressTypeKeys = ["tiny", "small", "medium", "normal", "large", "veryLarge", "giant"];
-for (var i = 0; i < fortressTypeKeys.length; i++)
+for (let fortType of g_FortressTypeKeys)
 {
-	var newKey = fortressTypeKeys[i] + "Palisades";
-	var oldWall = fortressTypes[fortressTypeKeys[i]].wall;
-	fortressTypes[newKey] = new Fortress(newKey);
+	var newKey = fortType + "Palisades";
+	var oldWall = g_FortressTypes[fortType].wall;
+	g_FortressTypes[newKey] = new Fortress(newKey);
 	var fillTowersBetween = ["wallShort", "wall", "wallLong", "endLeft", "endRight", "cornerIn", "cornerOut"];
 	for (var j = 0; j < oldWall.length; j++)
 	{
-		fortressTypes[newKey].wall.push(oldWall[j]); // Only works if the first element is not in fillTowersBetween (e.g. entry or gate like it should be)
+		g_FortressTypes[newKey].wall.push(oldWall[j]); // Only works if the first element is not in fillTowersBetween (e.g. entry or gate like it should be)
 		if (j+1 < oldWall.length)
 			if (fillTowersBetween.indexOf(oldWall[j]) > -1 && fillTowersBetween.indexOf(oldWall[j+1]) > -1) // ... > -1 means "exists" here
-				fortressTypes[newKey].wall.push("tower");
+				g_FortressTypes[newKey].wall.push("tower");
 	}
 }
 
 // Setup some balanced (to civ type fortresses) semi default fortresses for "palisades" style
 // TODO
 
-// Add some "fortress types" for roads (will only work with style "road")
-// ["start", "short", "xRight", "xLeft", "cornerLeft", "xStraight", "long", "xLeft", "xRight", "cornerRight", "tRight", "tLeft", "xRight", "xLeft", "curveLeft", "xStraight", "curveRight", "end"];
-var wall = ["short", "curveLeft", "short", "curveLeft", "short", "curveLeft", "short", "curveLeft"];
-fortressTypes["road01"] = new Fortress("road01", wall);
-var wall = ["short", "cornerLeft", "short", "cornerLeft", "short", "cornerLeft", "short", "cornerLeft"];
-fortressTypes["road02"] = new Fortress("road02", wall);
-var wall = ["xStraight", "curveLeft", "xStraight", "curveLeft", "xStraight", "curveLeft", "xStraight", "curveLeft"];
-fortressTypes["road03"] = new Fortress("road03", wall);
-var wall = ["start", "curveLeft", "tRight", "cornerLeft", "tRight", "curveRight", "short", "xRight", "curveLeft", "xRight", "short", "cornerLeft", "tRight", "short",
-	"curveLeft", "short", "tRight", "cornerLeft", "short", "xRight", "curveLeft", "xRight", "short", "curveRight", "tRight", "cornerLeft", "tRight", "curveLeft", "end"];
-fortressTypes["road04"] = new Fortress("road04", wall);
-var wall = ["start", "tLeft", "short", "xRight",
-	"curveLeft", "xRight", "tRight", "cornerLeft", "tRight",
-	"curveLeft", "short", "tRight", "cornerLeft", "xRight",
-	"cornerLeft", "xRight", "short", "tRight", "curveLeft", "end"];
-fortressTypes["road05"] = new Fortress("road05", wall);
-
 
 ///////////////////////////////
 // Define some helper functions
 ///////////////////////////////
+
+/**
+ * Get a wall element of a style.
+ * 
+ * If the element requested is unknown, the function attempts to derive
+ * it either from another element, or from a template or whatever.
+ * 
+ * @param style The style to which this element comes from
+ * @param element The element to fetch
+ * @return The wall element requested. Or a tower element.
+ */
+function getWallElement(style="athen_stone", element)
+{
+	if (g_WallStyleList.indexOf(style) < 0)
+	{
+		error("getWallElement: Style '"+style+"' not recognised. (Falling back to '" + FALLBACK_CIV + "_stone'.)");
+		style = FALLBACK_CIV + "_stone";
+	}
+	if (g_WallStyles[style][element])
+		return g_WallStyles[style][element];
+
+	// Attempt to derive any unknown elements.
+	// Defaults to a wall tower piece
+	var wallset = g_WallStyles[style];
+	var civ = style.split("_")[0];
+	var ret = clone(wallset.tower);
+
+	// We use clone() so we don't change the attributes of the object we're referencing
+	switch (element)
+	{
+
+	case "quarterCurve":
+		ret.angle += PI/4;
+		ret.bend = PI/2;
+		break;
+
+	case "eighthCurve":
+		ret.angle += PI/8;
+		ret.bend = PI/4;
+		break;
+
+	case "cornerIn":
+		if (wallset.quarterCurve)
+			ret = clone(wallset.quarterCurve);
+		else
+		{
+			ret.angle += PI/4
+			ret.indent = ret.length * 0.25;
+			ret.length = 0;
+		}
+		ret.bend = PI/2;
+		break;
+
+	case "cornerOut":
+		if (wallset.quarterCurve)
+		{
+			ret = clone(wallset.quarterCurve);
+			ret.angle += PI/2;
+			ret.indent -= ret.indent*2;
+		}
+		else
+		{
+			ret.angle -= PI/4;
+			ret.length *= 0.71;
+		}
+		ret.bend = -PI/2;
+		break;
+
+	case "wallShort":
+		warn("getWallElement: Deprecated use of 'wallShort' (please use 'short')");
+		ret = clone(wallset.short);
+		break;
+
+	case "wallMedium":
+	case "wall":
+		warn("getWallElement: Deprecated use of '"+element+"' (please use 'medium')");
+		ret = clone(wallset.medium);
+		break;
+
+	case "wallLong":
+		warn("getWallElement: Deprecated use of 'wallLong' (please use 'long')");
+		ret = clone(wallset.long);
+		break;
+
+	case "entry":
+		ret.entPath = undefined;
+		ret.length = clone(g_WallStyles[style].gate.length);
+		break;
+
+	case "entryTower":
+		ret.entPath = (g_CivList.indexOf(civ) > -1) ? "structures/"+civ+"_defense_tower" : "other/palisades_rocks_watchtower";
+		ret.indent = ret.length * -3;
+		ret.length = clone(g_WallStyles[style].gate.length);
+		break;
+
+	case "entryFort":
+		ret = clone(g_WallStyles[style].fort);
+		ret.angle -= PI;
+		ret.length *= 1.5;
+		ret.indent = ret.length;
+		break;
+
+	case "endLeft":
+		warn("getWallElement: Deprecated use of 'endLeft' (please use 'start')");
+	case "start":
+		if (wallset.end)
+		{
+			ret = clone(wallset.end);
+			ret.angle += PI;
+		}
+		break;
+
+	case "endRight":
+		warn("getWallElement: Deprecated use of 'endRight' (please use 'start')");
+	case "end":
+		if (wallset.end)
+			ret = clone(wallset.end);
+		break;
+
+	default:
+		// See if it's a structure (ie. house, barracks)
+		if (g_CivList.indexOf(civ) == -1)
+			civ = FALLBACK_CIV;
+		var entPath = "structures/"+civ+"_"+element;
+		if (RMS.TemplateExists(entPath))
+		{
+			if (["outpost", "defense_tower"].indexOf(element) > -1)
+				ret.indent = ret.length * -3;
+			else
+				ret.indent = ret.length * 3.5;
+			ret.entPath = entPath;
+			ret.length = 0;
+		}
+		else if (element.slice(0.3) === "gap")
+		{
+			ret.entPath = undefined;
+			ret.angle = 0;
+			ret.length = +element.slice(4);
+		}
+		else if (element.slice(0,4) === "turn")
+		{
+			ret.entPath = undefined;
+			ret.angle = PI/2;
+			ret.length = 0;
+			if (element.slice(5) === "out")
+				ret.angle -= ret.angle;
+		}
+		else
+			warn("Unrecognised wall element: "+element+" ("+ style+"). Defaulting to 'tower'.");
+	}
+
+	// cache to save having to calculate this element again
+	g_WallStyles[style][element] = ret;
+
+	return ret;
+}
+
+/**
+ * Set a wall element of a style.
+ * 
+ * @param style The style to which this element belongs
+ * @param element The element to add
+ * @param path The template path to read values from
+ */
+function setWallElement(style, element, path)
+{
+	var template = RMS.GetTemplate(path);
+	template = GetTemplateDataHelper(template);
+
+	if (!g_WallStyles[style])
+		g_WallStyles[style] = {};
+
+	var length = (template.wallPiece) ? template.wallPiece.length : template.obstruction.shape.width;
+	g_WallStyles[style][element] = {
+			"entPath": path,
+			"angle": (template.wallPiece) ? template.wallPiece.angle : PI,
+			"length": length / CELL_SIZE,
+			"indent": (template.wallPiece) ? template.wallPiece.indent / CELL_SIZE : 0,
+			"bend": (template.wallPiece) ? template.wallPiece.bend : 0
+		};
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  getWallAlignment
@@ -325,50 +328,52 @@ fortressTypes["road05"] = new Fortress("road05", wall);
 //	Placing the first wall element at startX/startY placed with an angle given by orientation
 //	An alignment can be used to get the "center" of a "wall" (more likely used for fortresses) with getCenterToFirstElement
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function getWallAlignment(startX, startY, wall, style, orientation)
+function getWallAlignment(startX, startY, wall=[], style="athen_stone", orientation=0)
 {
-	// Graciously handle arguments
-	if (wall === undefined)
-		wall = [];
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		warn("Function getWallAlignment: Unknown style: " + style + ' (falling back to "athen")');
-		style = "athen";
-	}
-	orientation = (orientation || 0);
-	
 	var alignment = [];
 	var wallX = startX;
 	var wallY = startY;
+
 	for (var i = 0; i < wall.length; i++)
 	{
-		var element = wallStyles[style][wall[i]];
+		var element = getWallElement(style, wall[i]);
 		if (element === undefined && i == 0)
-			warn("No valid wall element: style = " + style + ", wall[" + i + "] = " + wall[i] + ", wallStyles[" + style + "][wall[" + i + "]] = " + wallStyles[style][wall[i]] + ", element = " + element + ", wall = " + wall);
+		{
+			warn("Not a valid wall element: style = " + style + ", wall[" +i+ "] = " +wall[i]+ "; .entPath = " +element.entPath+ ", .length = " +element.length+ ", .angle = " +element.angle+ ", .indent = " +element.indent+ ", .bend = " +element.bend);
+			continue;
+		}
+
 		// Indentation
 		var placeX = wallX - element.indent * cos(orientation);
 		var placeY = wallY - element.indent * sin(orientation);
+
 		// Add wall elements entity placement arguments to the alignment
 		alignment.push({"x": placeX, "y": placeY, "entPath": element.entPath, "angle":orientation + element.angle});
+
 		// Preset vars for the next wall element
 		if (i+1 < wall.length)
 		{
-			orientation += element.bending;
-			var nextElement = wallStyles[style][wall[i+1]];
+			orientation += element.bend;
+			var nextElement = getWallElement(style, wall[i+1]);
 			if (nextElement === undefined)
-				warn("No valid wall element: style = " + style + ", wall[" + (i+1) + "] = " + wall[i+1] + ", wallStyles[" + style + "][wall[" + (i+1) + "]] = " + wallStyles[style][wall[i+1]] + ", nextElement = " + uneval(nextElement) + ", wall = " + wall);
-			var distance = (element.width + nextElement.width)/2;
+			{
+				warn("Not a valid wall element: style = " + style + ", wall[" +(i+1)+ "] = " +wall[i+1]+ "; .entPath = " +nextElement.entPath+ ", .length = " +nextElement.length+ ", .angle = " +nextElement.angle+ ", .indent = " +nextElement.indent+ ", .bend = " +nextElement.bend);
+				continue;
+			}
+			
+			var distance = (element.length + nextElement.length)/2 - getOverlap(style);
 			// Corrections for elements with indent AND bending
 			var indent = element.indent;
-			var bending = element.bending;
-			if (bending !== 0 && indent !== 0)
+			var bend = element.bend;
+			if (bend !== 0 && indent !== 0)
 			{
 				// Indent correction to adjust distance
-				distance += indent*sin(bending);
+				distance += indent*sin(bend);
 				// Indent correction to normalize indentation
 				wallX += indent * cos(orientation);
 				wallY += indent * sin(orientation);
 			}
+			
 			// Set the next coordinates of the next element in the wall without indentation adjustment
 			wallX -= distance * sin(orientation);
 			wallY += distance * cos(orientation);
@@ -400,25 +405,29 @@ function getCenterToFirstElement(alignment)
 //  getWallLength
 //
 //	NOTE: Does not support bending wall elements like corners!
-//	e.g. used by placeIrregularPolygonalWall
 //////////////////////////////////////////////////////////////////
-function getWallLength(wall, style)
+function getWallLength(style, wall=[])
 {
 	// Graciously handle arguments
-	if (wall === undefined)
-		wall = [];
-	if (!wallStyles.hasOwnProperty(style))
+	if (g_WallStyleList.indexOf(style) < 0)
 	{
-		warn("Function getWallLength: Unknown style: " + style + ' (falling back to "athen")');
-		style = "athen";
+		warn("getWallLength: Unknown style: '" + style + "'. (Falling back to '" + FALLBACK_CIV + "_stone').");
+		style = FALLBACK_CIV +"_stone";
 	}
-	
+
 	var length = 0;
-	for (var i = 0; i < wall.length; i++)
-	{
-		length += wallStyles[style][wall[i]].width;
-	}
+	var overlap = getOverlap(style);
+	for (let element of wall)
+		length += getWallElement(style, element).length - overlap;
+
 	return length;
+}
+
+function getOverlap(style)
+{
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
+	return g_WallStyles[style]["@overlap"];
 }
 
 
@@ -440,23 +449,17 @@ function getWallLength(wall, style)
 //	                It will then be build towards top/positive Y (if no bending wall elements like corners are used)
 //	                Raising orientation means the wall is rotated counter-clockwise like placeObject
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placeWall(startX, startY, wall, style, playerId, orientation)
+function placeWall(startX, startY, wall=[], style, playerId=0, orientation=0)
 {
-	// Graciously handle arguments
-	if (wall === undefined)
-		wall = [];
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	orientation = (orientation || 0);
+	if (!startX || !startY)
+		return;
+	
+	if (!style || g_WallStyleList.indexOf(style) == -1)
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
 	
 	// Get wall alignment
 	var AM = getWallAlignment(startX, startY, wall, style, orientation);
+	
 	// Place the wall
 	for (var iWall = 0; iWall < wall.length; iWall++)
 	{
@@ -477,19 +480,12 @@ function placeWall(startX, startY, wall, style, playerId, orientation)
 //	playerId       Optional. Number of the player the wall will be placed for. Default is 0 (gaia)
 //	orientation    Optional. Angle the first wall element (should be a gate or entrance) is placed. Default is 0
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placeCustomFortress(centerX, centerY, fortress, style, playerId, orientation)
+function placeCustomFortress(centerX, centerY, fortress, style, playerId=0, orientation=0)
 {
 	// Graciously handle arguments
-	fortress = (fortress || fortressTypes["medium"]);
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	orientation = (orientation || 0);
+	fortress = fortress || g_FortressTypes["medium"];
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
 	
 	// Calculate center if fortress.centerToFirstElement is undefined (default)
 	var centerToFirstElement = fortress.centerToFirstElement;
@@ -506,22 +502,14 @@ function placeCustomFortress(centerX, centerY, fortress, style, playerId, orient
 //
 //	Like placeCustomFortress just it takes type (a fortress type string, has to be in fortressTypes) instead of an instance of Fortress
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placeFortress(centerX, centerY, type, style, playerId, orientation)
+function placeFortress(centerX, centerY, type="medium", style, playerId=0, orientation=0)
 {
 	// Graciously handle arguments
-	type = (type || "medium");
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	orientation = (orientation || 0);
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
 	
 	// Call placeCustomFortress with the given arguments
-	placeCustomFortress(centerX, centerY, fortressTypes[type], style, playerId, orientation);
+	placeCustomFortress(centerX, centerY, g_FortressTypes[type], style, playerId, orientation);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -538,43 +526,34 @@ function placeFortress(centerX, centerY, type, style, playerId, orientation)
 //
 //	TODO: Maybe add angle offset for more generic looking?
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placeLinearWall(startX, startY, targetX, targetY, wallPart, style, playerId, endWithFirst)
+function placeLinearWall(startX, startY, targetX, targetY, wallPart, style, playerId=0, endWithFirst=true)
 {
 	// Setup optional arguments to the default
-	wallPart = (wallPart || ["tower", "wallLong"]);
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	endWithFirst = typeof endWithFirst == "undefined" ? true : endWithFirst;
+	wallPart = wallPart || ["tower", "long"];
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
 	
 	// Check arguments
-	for (var elementIndex = 0; elementIndex < wallPart.length; elementIndex++)
-	{
-		var bending = wallStyles[style][wallPart[elementIndex]].bending;
-		if (bending != 0)
-			warn("Bending is not supported by placeLinearWall but a bending wall element is used: " + wallPart[elementIndex] + " -> wallStyles[style][wallPart[elementIndex]].entPath");
-	}
+	for (let element of wallPart)
+		if (getWallElement(style, element).bend != 0)
+			warn("Bending is not supported by placeLinearWall but the following bending wall element was used: " + element);
+
 	// Setup number of wall parts
 	var totalLength = getDistance(startX, startY, targetX, targetY);
-	var wallPartLength = 0;
-	for (var elementIndex = 0; elementIndex < wallPart.length; elementIndex++)
-		wallPartLength += wallStyles[style][wallPart[elementIndex]].width;
+	var wallPartLength = getWallLength(style, wallPart);
 	var numParts = 0;
 	if (endWithFirst == true)
-		numParts = ceil((totalLength - wallStyles[style][wallPart[0]].width) / wallPartLength);
+		numParts = ceil((totalLength - getWallElement(style, wallPart[0]).length) / wallPartLength);
 	else
 		numParts = ceil(totalLength / wallPartLength);
+
 	// Setup scale factor
 	var scaleFactor = 1;
 	if (endWithFirst == true)
-		scaleFactor = totalLength / (numParts * wallPartLength + wallStyles[style][wallPart[0]].width);
+		scaleFactor = totalLength / (numParts * wallPartLength + getWallElement(style, wallPart[0]).length);
 	else
 		scaleFactor = totalLength / (numParts * wallPartLength);
+
 	// Setup angle
 	var wallAngle = getAngle(startX, startY, targetX, targetY); // NOTE: function "getAngle()" is about to be changed...
 	var placeAngle = wallAngle - PI/2;
@@ -585,26 +564,31 @@ function placeLinearWall(startX, startY, targetX, targetY, wallPart, style, play
 	{
 		for (var elementIndex = 0; elementIndex < wallPart.length; elementIndex++)
 		{
-			var wallEle = wallStyles[style][wallPart[elementIndex]];
-			// Width correction
-			x += scaleFactor * wallEle.width/2 * cos(wallAngle);
-			y += scaleFactor * wallEle.width/2 * sin(wallAngle);
+			let wallEle = getWallElement(style, wallPart[elementIndex]);
+			let wallLength = (wallEle.length - getOverlap(style)) / 2;
+			let distX = scaleFactor * wallLength * cos(wallAngle);
+			let distY = scaleFactor * wallLength * sin(wallAngle);
+			// Length correction
+			x += distX;
+			y += distY;
 			// Indent correction
-			var placeX = x - wallEle.indent * sin(wallAngle);
-			var placeY = y + wallEle.indent * cos(wallAngle);
+			let placeX = x - wallEle.indent * sin(wallAngle);
+			let placeY = y + wallEle.indent * cos(wallAngle);
 			// Placement
-			var entPath = wallEle.entPath;
+			let entPath = wallEle.entPath;
 			if (entPath !== undefined)
 				placeObject(placeX, placeY, entPath, playerId, placeAngle + wallEle.angle);
-			x += scaleFactor * wallEle.width/2 * cos(wallAngle);
-			y += scaleFactor * wallEle.width/2 * sin(wallAngle);
+			// Prep for next object
+			x += distX;
+			y += distY;
 		}
 	}
 	if (endWithFirst == true)
 	{
-		var wallEle = wallStyles[style][wallPart[0]];
-		x += scaleFactor * wallEle.width/2 * cos(wallAngle);
-		y += scaleFactor * wallEle.width/2 * sin(wallAngle);
+		var wallEle = getWallElement(style, wallPart[0]);
+		let wallLength = (wallEle.length - getOverlap(style)) / 2;
+		x += scaleFactor * wallLength * cos(wallAngle);
+		y += scaleFactor * wallLength * sin(wallAngle);
 		var entPath = wallEle.entPath;
 		if (entPath !== undefined)
 			placeObject(x, y, entPath, playerId, placeAngle + wallEle.angle);
@@ -633,47 +617,34 @@ function placeLinearWall(startX, startY, targetX, targetY, wallPart, style, play
 //	TODO: Check if maxBendOff parameter works in all cases
 //	TODO: Perhaps add functionality for spirals
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placeCircularWall(centerX, centerY, radius, wallPart, style, playerId, orientation, maxAngle, endWithFirst, maxBendOff)
+function placeCircularWall(centerX, centerY, radius, wallPart, style, playerId=0, orientation=0, maxAngle=TWO_PI, endWithFirst, maxBendOff=0)
 {
 	// Setup optional arguments to the default
-	wallPart = (wallPart || ["tower", "wallLong"]);
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	orientation = (orientation || 0);
-	maxAngle = (maxAngle || 2*PI);
+	wallPart = wallPart || ["tower", "long"];
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
 	if (endWithFirst === undefined)
 	{
-		if (maxAngle >= 2*PI - 0.001) // Can this be done better?
+		if (maxAngle >= TWO_PI - 0.001) // Can this be done better?
 			endWithFirst = false;
 		else
 			endWithFirst = true;
 	}
-	maxBendOff = (maxBendOff || 0);
 	
 	// Check arguments
 	if (maxBendOff > PI/2 || maxBendOff < 0)
 		warn("placeCircularWall maxBendOff should satisfy 0 < maxBendOff < PI/2 (~1.5) but it is: " + maxBendOff);
-	for (var elementIndex = 0; elementIndex < wallPart.length; elementIndex++)
-	{
-		var bending = wallStyles[style][wallPart[elementIndex]].bending;
-		if (bending != 0)
-			warn("Bending is not supported by placeCircularWall but a bending wall element is used: " + wallPart[elementIndex]);
-	}
+	for (let element of wallPart)
+		if (getWallElement(style, element).bend != 0)
+			warn("Bending is not supported by placeCircularWall but the following bending wall element was used: " + element);
+
 	// Setup number of wall parts
 	var totalLength = maxAngle * radius;
-	var wallPartLength = 0;
-	for (var elementIndex = 0; elementIndex < wallPart.length; elementIndex++)
-		wallPartLength += wallStyles[style][wallPart[elementIndex]].width;
+	var wallPartLength = getWallLength(style, wallPart);
 	var numParts = 0;
 	if (endWithFirst == true)
 	{
-		numParts = ceil((totalLength - wallStyles[style][wallPart[0]].width) / wallPartLength);
+		numParts = ceil((totalLength - getWallElement(style, wallPart[0]).length) / wallPartLength);
 	}
 	else
 	{
@@ -682,25 +653,25 @@ function placeCircularWall(centerX, centerY, radius, wallPart, style, playerId, 
 	// Setup scale factor
 	var scaleFactor = 1;
 	if (endWithFirst == true)
-		scaleFactor = totalLength / (numParts * wallPartLength + wallStyles[style][wallPart[0]].width);
+		scaleFactor = totalLength / (numParts * wallPartLength + getWallElement(style, wallPart[0]).length);
 	else
 		scaleFactor = totalLength / (numParts * wallPartLength);
 	// Place wall entities
 	var actualAngle = orientation + (2*PI - maxAngle) / 2;
 	var x = centerX + radius*cos(actualAngle);
 	var y = centerY + radius*sin(actualAngle);
-	for (var partIndex = 0; partIndex < numParts; partIndex++)
+	for (let partIndex = 0; partIndex < numParts; partIndex++)
 	{
-		for (var elementIndex = 0; elementIndex < wallPart.length; elementIndex++)
+		for (let wallEle of wallPart)
 		{
-			var wallEle = wallStyles[style][wallPart[elementIndex]];
+			wallEle = getWallElement(style, wallEle);
 			// Width correction
-			var addAngle = scaleFactor * wallEle.width / radius;
-			var targetX = centerX + radius * cos(actualAngle + addAngle);
-			var targetY = centerY + radius * sin(actualAngle + addAngle);
-			var placeX = x + (targetX - x)/2;
-			var placeY = y + (targetY - y)/2;
-			var placeAngle = actualAngle + addAngle/2;
+			let addAngle = scaleFactor * (wallEle.length - getOverlap(style)) / radius;
+			let targetX = centerX + radius * cos(actualAngle + addAngle);
+			let targetY = centerY + radius * sin(actualAngle + addAngle);
+			let placeX = x + (targetX - x)/2;
+			let placeY = y + (targetY - y)/2;
+			let placeAngle = actualAngle + addAngle/2;
 			// Indent correction
 			placeX -= wallEle.indent * cos(placeAngle);
 			placeY -= wallEle.indent * sin(placeAngle);
@@ -716,8 +687,8 @@ function placeCircularWall(centerX, centerY, radius, wallPart, style, playerId, 
 	}
 	if (endWithFirst == true)
 	{
-		var wallEle = wallStyles[style][wallPart[0]];
-		var addAngle = scaleFactor * wallEle.width / radius;
+		var wallEle = getWallElement(style, wallPart[0]);
+		var addAngle = scaleFactor * wallEle.length / radius;
 		var targetX = centerX + radius * cos(actualAngle + addAngle);
 		var targetY = centerY + radius * sin(actualAngle + addAngle);
 		var placeX = x + (targetX - x)/2;
@@ -747,43 +718,40 @@ function placeCircularWall(centerX, centerY, radius, wallPart, style, playerId, 
 //	TODO: Check some arguments
 //	TODO: Add eccentricity and perhaps make it just call placeIrregularPolygonalWall with irregularity = 0
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placePolygonalWall(centerX, centerY, radius, wallPart, cornerWallElement, style, playerId, orientation, numCorners, skipFirstWall)
+function placePolygonalWall(centerX, centerY, radius, wallPart, cornerWallElement, style, playerId=0, orientation=0, numCorners=8, skipFirstWall=true)
 {
 	// Setup optional arguments to the default
-	wallPart = (wallPart || ["wallLong", "tower"]);
-	cornerWallElement = (cornerWallElement || "tower"); // Don't use wide elements for this. Not supported well...
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	orientation = (orientation || 0);
-	numCorners = (numCorners || 8);
-	skipFirstWall = (skipFirstWall || true);
-	
+	wallPart = wallPart || ["long", "tower"];
+	cornerWallElement = cornerWallElement || "tower"; // Don't use wide elements for this. Not supported well...
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
+
 	// Setup angles
-	var angleAdd = 2*PI/numCorners;
+	var angleAdd = TWO_PI/numCorners;
 	var angleStart = orientation - angleAdd/2;
+
 	// Setup corners
 	var corners = [];
-	for (var i = 0; i < numCorners; i++)
+	for (let i = 0; i < numCorners; i++)
 		corners.push([centerX + radius*cos(angleStart + i*angleAdd), centerY + radius*sin(angleStart + i*angleAdd)]);
+
 	// Place Corners and walls
-	for (var i = 0; i < numCorners; i++)
+	for (let i = 0; i < numCorners; i++)
 	{
-		var angleToCorner = getAngle(corners[i][0], corners[i][1], centerX, centerY);
-		placeObject(corners[i][0], corners[i][1], wallStyles[style][cornerWallElement].entPath, playerId, angleToCorner);
+		let angleToCorner = getAngle(corners[i][0], corners[i][1], centerX, centerY);
+		placeObject(corners[i][0], corners[i][1], getWallElement(style, cornerWallElement).entPath, playerId, angleToCorner);
 		if (!(skipFirstWall && i == 0))
 		{
+			let cornerLength = getWallElement(style, cornerWallElement).length / 2;
+			let cornerAngle = angleToCorner + angleAdd / 2;
+			let cornerX = cornerLength * sin(cornerAngle);
+			let cornerY = cornerLength * cos(cornerAngle);
 			placeLinearWall(
 				// Adjustment to the corner element width (approximately)
-				corners[i][0] + wallStyles[style][cornerWallElement].width/2 * sin(angleToCorner + angleAdd/2), // startX
-				corners[i][1] - wallStyles[style][cornerWallElement].width/2 * cos(angleToCorner + angleAdd/2), // startY
-				corners[(i+1)%numCorners][0] - wallStyles[style][cornerWallElement].width/2 * sin(angleToCorner + angleAdd/2), // targetX
-				corners[(i+1)%numCorners][1] + wallStyles[style][cornerWallElement].width/2 * cos(angleToCorner + angleAdd/2), // targetY
+				corners[i][0] + cornerX, // startX
+				corners[i][1] - cornerY, // startY
+				corners[(i+1)%numCorners][0] - cornerX, // targetX
+				corners[(i+1)%numCorners][1] + cornerY, // targetY
 				wallPart, style, playerId);
 		}
 	}
@@ -800,9 +768,9 @@ function placePolygonalWall(centerX, centerY, radius, wallPart, cornerWallElemen
 //	style                Optional. Wall style string. Default is the civ of the given player, "palisades" for gaia
 //	playerId             Optional. Integer number of the player. Default is 0 (gaia)
 //	orientation          Optional. Angle from the center to the first linear wall part placed. Default is 0 (towards positive X/right)
-//	numCorners           Optional. How many corners the polygon will have. Default is 8 (matching a civ centers territory)
+//	numCorners           Optional. How many corners the polygon will have. Default is randomly chosen from 'tween 5 & 7 inclusive
 //	irregularity         Optional. How irregular the polygon will be. 0 means regular, 1 means VERY irregular. Default is 0.5
-//	skipFirstWall        Optional. Boolean. If the first linear wall part will be left opened as entrance. Default is true
+//	skipFirstWall        Optional. Boolean. If the first linear wall part will be left opened as entrance. Default is false
 //	wallPartsAssortment  Optional. An array of wall part arrays to choose from for each linear wall connecting the corners. Default is hard to describe ^^
 //
 //	NOTE: wallPartsAssortment is put to the end because it's hardest to set
@@ -811,23 +779,18 @@ function placePolygonalWall(centerX, centerY, radius, wallPart, cornerWallElemen
 //	TODO: Check some arguments
 //	TODO: Perhaps add eccentricity
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placeIrregularPolygonalWall(centerX, centerY, radius, cornerWallElement, style, playerId, orientation, numCorners, irregularity, skipFirstWall, wallPartsAssortment)
+function placeIrregularPolygonalWall(centerX, centerY, radius, cornerWallElement="tower", style, playerId=0, orientation=0, numCorners, irregularity=0.5, skipFirstWall=false, wallPartsAssortment)
 {
 	// Setup optional arguments
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
+	numCorners = (numCorners || randInt(5, 7));
+
 	// Generating a generic wall part assortment with each wall part including 1 gate lengthened by walls and towers
 	// NOTE: It might be a good idea to write an own function for that...
-	var defaultWallPartsAssortment = [["wallShort"], ["wall"], ["wallLong"], ["gate", "tower", "wallShort"]];
+	var defaultWallPartsAssortment = [["short"], ["medium"], ["long"], ["gate", "tower", "short"]];
 	var centeredWallPart = ["gate"];
-	var extandingWallPartAssortment = [["tower", "wallLong"], ["tower", "wall"]];
+	var extandingWallPartAssortment = [["tower", "long"], ["tower", "medium"]];
 	defaultWallPartsAssortment.push(centeredWallPart);
 	for (var i = 0; i < extandingWallPartAssortment.length; i++)
 	{
@@ -847,15 +810,9 @@ function placeIrregularPolygonalWall(centerX, centerY, radius, cornerWallElement
 	}
 	// Setup optional arguments to the default
 	wallPartsAssortment = (wallPartsAssortment || defaultWallPartsAssortment);
-	cornerWallElement = (cornerWallElement || "tower"); // Don't use wide elements for this. Not supported well...
-	style = (style || "palisades");
-	playerId = (playerId || 0);
-	orientation = (orientation || 0);
-	numCorners = (numCorners || randInt(5, 7));
-	irregularity = (irregularity || 0.5);
-	skipFirstWall = (skipFirstWall || false);
+
 	// Setup angles
-	var angleToCover = 2*PI;
+	var angleToCover = TWO_PI;
 	var angleAddList = [];
 	for (var i = 0; i < numCorners; i++)
 	{
@@ -875,18 +832,19 @@ function placeIrregularPolygonalWall(centerX, centerY, radius, cornerWallElement
 	// Setup best wall parts for the different walls (a bit confusing naming...)
 	var wallPartLengths = [];
 	var maxWallPartLength = 0;
-	for (var partIndex = 0; partIndex < wallPartsAssortment.length; partIndex++)
+	for (let wallPart of wallPartsAssortment)
 	{
-		var length = wallPartLengths[partIndex];
-		wallPartLengths.push(getWallLength(wallPartsAssortment[partIndex], style));
+		var length = getWallLength(style, wallPart);
+		wallPartLengths.push(length);
 		if (length > maxWallPartLength)
 			maxWallPartLength = length;
 	}
+	
 	var wallPartList = []; // This is the list of the wall parts to use for the walls between the corners, not to confuse with wallPartsAssortment!
 	for (var i = 0; i < numCorners; i++)
 	{
-		var bestWallPart = []; // This is a simpel wall part not a wallPartsAssortment!
-		var bestWallLength = 99999999;
+		var bestWallPart = []; // This is a simple wall part not a wallPartsAssortment!
+		var bestWallLength = Number.MAX_VALUE;
 		// NOTE: This is not exactly like the length the wall will be in the end. Has to be tweaked...
 		var wallLength = getDistance(corners[i][0], corners[i][1], corners[(i+1)%numCorners][0], corners[(i+1)%numCorners][1]);
 		var numWallParts = ceil(wallLength/maxWallPartLength);
@@ -901,19 +859,21 @@ function placeIrregularPolygonalWall(centerX, centerY, radius, cornerWallElement
 		}
 		wallPartList.push(bestWallPart);
 	}
+
 	// Place Corners and walls
 	for (var i = 0; i < numCorners; i++)
 	{
 		var angleToCorner = getAngle(corners[i][0], corners[i][1], centerX, centerY);
-		placeObject(corners[i][0], corners[i][1], wallStyles[style][cornerWallElement].entPath, playerId, angleToCorner);
+		placeObject(corners[i][0], corners[i][1], getWallElement(style, cornerWallElement).entPath, playerId, angleToCorner);
 		if (!(skipFirstWall && i == 0))
 		{
+			let cornerLength = getWallElement(style, cornerWallElement).length / 2;
 			placeLinearWall(
 				// Adjustment to the corner element width (approximately)
-				corners[i][0] + wallStyles[style][cornerWallElement].width/2 * sin(angleToCorner + angleAddList[i]/2), // startX
-				corners[i][1] - wallStyles[style][cornerWallElement].width/2 * cos(angleToCorner + angleAddList[i]/2), // startY
-				corners[(i+1)%numCorners][0] - wallStyles[style][cornerWallElement].width/2 * sin(angleToCorner + angleAddList[(i+1)%numCorners]/2), // targetX
-				corners[(i+1)%numCorners][1] + wallStyles[style][cornerWallElement].width/2 * cos(angleToCorner + angleAddList[(i+1)%numCorners]/2), // targetY
+				corners[i][0] + cornerLength * sin(angleToCorner + angleAddList[i]/2), // startX
+				corners[i][1] - cornerLength * cos(angleToCorner + angleAddList[i]/2), // startY
+				corners[(i+1)%numCorners][0] - cornerLength * sin(angleToCorner + angleAddList[(i+1)%numCorners]/2), // targetX
+				corners[(i+1)%numCorners][1] + cornerLength * cos(angleToCorner + angleAddList[(i+1)%numCorners]/2), // targetY
 				wallPartList[i], style, playerId, false);
 		}
 	}
@@ -926,41 +886,31 @@ function placeIrregularPolygonalWall(centerX, centerY, radius, cornerWallElement
 //	This is the default Iberian civ bonus starting wall
 //
 //	centerX/Y      The approximate center coordinates of the fortress
-//	radius         The approximate radius of the wall to be placed
+//	radius         Optional. The approximate radius of the wall to be placed. Default is 20
 //	playerId       Optional. Integer number of the player. Default is 0 (gaia)
 //	style          Optional. Wall style string. Default is the civ of the given player, "palisades" for gaia
-//	irregularity   Optional. Float between 0 (circle) and 1 (very spiky), default is 1/2
+//	irregularity   Optional. Float between 0 (circle) and 1 (very spiky), default is 0.5
 //	gateOccurence  Optional. Integer number, every n-th walls will be a gate instead. Default is 3
 //	maxTrys        Optional. How often the function tries to find a better fitting shape at max. Default is 100
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-function placeGenericFortress(centerX, centerY, radius, playerId, style, irregularity, gateOccurence, maxTrys)
+function placeGenericFortress(centerX, centerY, radius=20, playerId=0, style, irregularity=0.5, gateOccurence=3, maxTrys=100)
 {
 	// Setup optional arguments
-	radius = (radius || 20);
-	playerId = (playerId || 0);
-	if (!wallStyles.hasOwnProperty(style))
-	{
-		if (playerId == 0)
-			style = (style || "palisades");
-		else
-			style = (getCivCode(playerId-1));
-	}
-	irregularity = (irregularity || 1/2);
-	gateOccurence = (gateOccurence || 3);
-	maxTrys = (maxTrys || 100);
+	if (!style || !g_WallStyles[style])
+		style = (playerId == 0) ? "palisade" : getCivCode(playerId-1)+"_stone";
 	
 	// Setup some vars
 	var startAngle = randFloat(0, 2*PI);
 	var actualOffX = radius*cos(startAngle);
 	var actualOffY = radius*sin(startAngle);
 	var actualAngle = startAngle;
-	var pointDistance = wallStyles[style]["wallLong"].width + wallStyles[style]["tower"].width;
+	var pointDistance = getWallLength(style, ["long", "tower"]);
 	// Searching for a well fitting point derivation
 	var tries = 0;
 	var bestPointDerivation = undefined;
 	var minOverlap = 1000;
 	var overlap = undefined;
-	while (tries < maxTrys && minOverlap > wallStyles[style]["tower"].width / 10)
+	while (tries < maxTrys && minOverlap > getOverlap(style))
 	{
 		var pointDerivation = [];
 		var distanceToTarget = 1000;
@@ -969,8 +919,8 @@ function placeGenericFortress(centerX, centerY, radius, playerId, style, irregul
 		{
 			var indent = randFloat(-irregularity*pointDistance, irregularity*pointDistance);
 			var tmpAngle = getAngle(actualOffX, actualOffY,
-				(radius + indent)*cos(actualAngle + (pointDistance / radius)),
-				(radius + indent)*sin(actualAngle + (pointDistance / radius)));
+				(radius + indent)*cos(actualAngle + pointDistance / radius),
+				(radius + indent)*sin(actualAngle + pointDistance / radius));
 			actualOffX += pointDistance*cos(tmpAngle);
 			actualOffY += pointDistance*sin(tmpAngle);
 			actualAngle = getAngle(0, 0, actualOffX, actualOffY);
@@ -999,20 +949,23 @@ function placeGenericFortress(centerX, centerY, radius, playerId, style, irregul
 		var targetX = centerX + bestPointDerivation[(pointIndex + 1) % bestPointDerivation.length][0];
 		var targetY = centerY + bestPointDerivation[(pointIndex + 1) % bestPointDerivation.length][1];
 		var angle = getAngle(startX, startY, targetX, targetY);
-		var wallElement = "wallLong";
+		var wallElement = "long";
 		if ((pointIndex + 1) % gateOccurence == 0)
 			wallElement = "gate";
-		var entPath = wallStyles[style][wallElement].entPath;
+
+		var entPath = getWallElement(style, wallElement).entPath;
 		if (entPath)
 		{
 			placeObject(startX + (getDistance(startX, startY, targetX, targetY)/2)*cos(angle), // placeX
 				startY + (getDistance(startX, startY, targetX, targetY)/2)*sin(angle), // placeY
-				entPath, playerId, angle - PI/2 + wallStyles[style][wallElement].angle);
+				entPath, playerId, angle - PI/2 + getWallElement(style, wallElement).angle);
 		}
 		// Place tower
 		var startX = centerX + bestPointDerivation[(pointIndex + bestPointDerivation.length - 1) % bestPointDerivation.length][0];
 		var startY = centerY + bestPointDerivation[(pointIndex + bestPointDerivation.length - 1) % bestPointDerivation.length][1];
 		var angle = getAngle(startX, startY, targetX, targetY);
-		placeObject(centerX + bestPointDerivation[pointIndex][0], centerY + bestPointDerivation[pointIndex][1], wallStyles[style]["tower"].entPath, playerId, angle - PI/2 + wallStyles[style]["tower"].angle);
+
+		var tower = getWallElement(style, "tower");
+		placeObject(centerX + bestPointDerivation[pointIndex][0], centerY + bestPointDerivation[pointIndex][1], tower.entPath, playerId, angle - PI/2 + tower.angle);
 	}
 }
