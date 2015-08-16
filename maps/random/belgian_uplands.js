@@ -31,10 +31,10 @@ function getRandomReliefmap(minHeight, maxHeight)
 	if (maxHeight > MAX_HEIGHT)
 		warn("getRandomReliefmap: Argument maxHeight is smaler then the supported maximum height of " + MAX_HEIGHT + " (const MAX_HEIGHT): " + maxHeight)
 	var reliefmap = [];
-	for (var x = 0; x <= mapSize; x++)
+	for (var x = 0; x <= mapSize; ++x)
 	{
 		reliefmap.push([]);
-		for (var y = 0; y <= mapSize; y++)
+		for (var y = 0; y <= mapSize; ++y)
 		{
 			reliefmap[x].push(randFloat(minHeight, maxHeight));
 		}
@@ -46,9 +46,9 @@ function getRandomReliefmap(minHeight, maxHeight)
 function setReliefmap(reliefmap)
 {
 	// g_Map.height = reliefmap;
-	for (var x = 0; x <= mapSize; x++)
+	for (var x = 0; x <= mapSize; ++x)
 	{
-		for (var y = 0; y <= mapSize; y++)
+		for (var y = 0; y <= mapSize; ++y)
 		{
 			setHeight(x, y, reliefmap[x][y]);
 		}
@@ -61,9 +61,9 @@ function getMinAndMaxHeight(reliefmap)
 	var height = {};
 	height.min = Infinity;
 	height.max = -Infinity;
-	for (var x = 0; x <= mapSize; x++)
+	for (var x = 0; x <= mapSize; ++x)
 	{
-		for (var y = 0; y <= mapSize; y++)
+		for (var y = 0; y <= mapSize; ++y)
 		{
 			if (reliefmap[x][y] < height.min)
 				height.min = reliefmap[x][y];
@@ -85,9 +85,9 @@ function getRescaledReliefmap(reliefmap, minHeight, maxHeight)
 	if (maxHeight > MAX_HEIGHT)
 		warn("getRescaledReliefmap: Argument maxHeight is smaler then the supported maximum height of " + MAX_HEIGHT + " (const MAX_HEIGHT): " + maxHeight)
 	var oldHeightRange = getMinAndMaxHeight(reliefmap);
-	for (var x = 0; x <= mapSize; x++)
+	for (var x = 0; x <= mapSize; ++x)
 	{
-		for (var y = 0; y <= mapSize; y++)
+		for (var y = 0; y <= mapSize; ++y)
 		{
 			newReliefmap[x][y] = minHeight + (reliefmap[x][y] - oldHeightRange.min) / (oldHeightRange.max - oldHeightRange.min) * (maxHeight - minHeight);
 		}
@@ -101,12 +101,12 @@ function getHeightErrosionedReliefmap(reliefmap, strength)
 	var newReliefmap = deepcopy(reliefmap);
 	strength = (strength || 1.0); // Values much higher then 1 (1.32+ for an 8 tile map, 1.45+ for a 12 tile map, 1.62+ @ 20 tile map, 0.99 @ 4 tiles) will result in a resonance disaster/self interference
 	var map = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]; // Default
-	for (var x = 0; x <= mapSize; x++)
+	for (var x = 0; x <= mapSize; ++x)
 	{
-		for (var y = 0; y <= mapSize; y++)
+		for (var y = 0; y <= mapSize; ++y)
 		{
 			var div = 0;
-			for (var i = 0; i < map.length; i++)
+			for (var i = 0; i < map.length; ++i)
 				newReliefmap[x][y] += strength / map.length * (reliefmap[(x + map[i][0] + mapSize + 1) % (mapSize + 1)][(y + map[i][1] + mapSize + 1) % (mapSize + 1)] - reliefmap[x][y]); // Not entirely sure if scaling with map.length is perfect but tested values seam to indicate it is
 		}
 	}
@@ -169,7 +169,7 @@ var terreins = ["temp_grass_plants|gaia/flora_tree_euro_beech", "temp_grass_moss
 	"temp_grass_long|gaia/flora_tree_apple", "temp_grass_clovers|gaia/flora_bush_berry", "temp_grass_clovers_2|gaia/flora_bush_grapes",
 	"temp_grass_plants|gaia/fauna_deer", "temp_grass_long_b|gaia/fauna_rabbit"];
 var numTerreins = terreins.length;
-for (var i = 0; i < numTerreins; i++)
+for (var i = 0; i < numTerreins; ++i)
 	terreins.push("temp_grass_plants");
 textueByHeight.push({"upperHeightLimit": waterHeightAdjusted + 5/6 * (heightRange.max - waterHeightAdjusted), "terrain": terreins});
 // Unpassable woods
@@ -196,11 +196,11 @@ var enoughTiles = false;
 var tries = 0;
 while (!goodStartPositionsFound)
 {
-	tries++;
+	++tries;
 	log("Starting giant while loop try " + tries);
 	// Generate reliefmap
 	var myReliefmap = getRandomReliefmap(heightRange.min, heightRange.max);
-	for (var i = 0; i < 50 + mapSize/4; i++) // Cycles depend on mapsize (more cycles -> bigger structures)
+	for (var i = 0; i < 50 + mapSize/4; ++i) // Cycles depend on mapsize (more cycles -> bigger structures)
 		myReliefmap = getHeightErrosionedReliefmap(myReliefmap, 1);
 	myReliefmap = getRescaledReliefmap(myReliefmap, heightRange.min, heightRange.max);
 	setReliefmap(myReliefmap);
@@ -213,18 +213,18 @@ while (!goodStartPositionsFound)
 	var lowerHeightLimit = textueByHeight[3].upperHeightLimit;
 	var upperHeightLimit = textueByHeight[6].upperHeightLimit;
 	// Check for valid points by height
-	for (var x = distToBorder + minTerrainDistToBorder; x < mapSize - distToBorder - minTerrainDistToBorder; x++)
+	for (var x = distToBorder + minTerrainDistToBorder; x < mapSize - distToBorder - minTerrainDistToBorder; ++x)
 	{
-		for (var y = distToBorder + minTerrainDistToBorder; y < mapSize - distToBorder - minTerrainDistToBorder; y++)
+		for (var y = distToBorder + minTerrainDistToBorder; y < mapSize - distToBorder - minTerrainDistToBorder; ++y)
 		{
 			var actualHeight = getHeight(x, y);
 			if (actualHeight > lowerHeightLimit && actualHeight < upperHeightLimit)
 			{
 				// Check for points within a valid area by height (rectangular since faster)
 				var isPossible = true;
-				for (var offX = - neededDistance; offX <= neededDistance; offX++)
+				for (var offX = - neededDistance; offX <= neededDistance; ++offX)
 				{
-					for (var offY = - neededDistance; offY <= neededDistance; offY++)
+					for (var offY = - neededDistance; offY <= neededDistance; ++offY)
 					{
 						var testHeight = getHeight(x + offX, y + offY);
 						if (testHeight <= lowerHeightLimit || testHeight >= upperHeightLimit)
@@ -248,7 +248,7 @@ while (!goodStartPositionsFound)
 	// Reduce to tiles in a circle of mapSize / 2 distance to the center (to avoid players placed in corners)
 	var possibleStartPositionsTemp = [];
 	var maxDistToCenter = mapSize / 2;
-	for (var i = 0; i < possibleStartPositions.length; i++)
+	for (var i = 0; i < possibleStartPositions.length; ++i)
 	{
 		var deltaX = possibleStartPositions[i][0] - mapSize / 2;
 		var deltaY = possibleStartPositions[i][1] - mapSize / 2;
@@ -266,19 +266,19 @@ while (!goodStartPositionsFound)
 	var maxDistToResources = distToBorder; // Has to be <= distToBorder!
 	var minNumLowTiles = 10;
 	var minNumHighTiles = 10;
-	for (var i = 0; i < possibleStartPositions.length; i++)
+	for (var i = 0; i < possibleStartPositions.length; ++i)
 	{
 		var numLowTiles = 0;
 		var numHighTiles = 0;
-		for (var dx = - maxDistToResources; dx < maxDistToResources; dx++)
+		for (var dx = - maxDistToResources; dx < maxDistToResources; ++dx)
 		{
-			for (var dy = - maxDistToResources; dy < maxDistToResources; dy++)
+			for (var dy = - maxDistToResources; dy < maxDistToResources; ++dy)
 			{
 				var testHeight = getHeight(possibleStartPositions[i][0] + dx, possibleStartPositions[i][1] + dy);
 				if (testHeight < lowerHeightLimit)
-					numLowTiles++;
+					++numLowTiles;
 				if (testHeight > upperHeightLimit)
-					numHighTiles++;
+					++numHighTiles;
 				if (numLowTiles > minNumLowTiles && numHighTiles > minNumHighTiles)
 					break;
 			}
@@ -307,22 +307,22 @@ while (!goodStartPositionsFound)
 		// Get some random start location derivations. NOTE: Itterating over all possible derivations is just to much (valid points ** numPlayers)
 		var maxTries = 100000; // floor(800000 / (Math.pow(numPlayers, 2) / 2));
 		var possibleDerivations = [];
-		for (var i = 0; i < maxTries; i++)
+		for (var i = 0; i < maxTries; ++i)
 		{
 			var vector = [];
-			for (var p = 0; p < numPlayers; p++)
+			for (var p = 0; p < numPlayers; ++p)
 				vector.push(randInt(possibleStartPositions.length));
 			possibleDerivations.push(vector);
 		}
 		
 		// Choose the start location derivation with the greatest minimum distance between players
 		var maxMinDist = 0;
-		for (var d = 0; d < possibleDerivations.length; d++)
+		for (var d = 0; d < possibleDerivations.length; ++d)
 		{
 			var minDist = 2 * mapSize;
-			for (var p1 = 0; p1 < numPlayers - 1; p1++)
+			for (var p1 = 0; p1 < numPlayers - 1; ++p1)
 			{
-				for (var p2 = p1 + 1; p2 < numPlayers; p2++)
+				for (var p2 = p1 + 1; p2 < numPlayers; ++p2)
 				{
 					if (p1 != p2)
 					{
@@ -368,12 +368,12 @@ if (mapSize > 500)
 	propDensity = 1/4;
 else if (mapSize > 400)
 	propDensity = 3/4;
-for(var x = minTerrainDistToBorder; x < mapSize - minTerrainDistToBorder; x++)
+for(var x = minTerrainDistToBorder; x < mapSize - minTerrainDistToBorder; ++x)
 {
-	for (var y = minTerrainDistToBorder; y < mapSize - minTerrainDistToBorder; y++)
+	for (var y = minTerrainDistToBorder; y < mapSize - minTerrainDistToBorder; ++y)
 	{
 		var textureMinHeight = heightRange.min;
-		for (var i = 0; i < textueByHeight.length; i++)
+		for (var i = 0; i < textueByHeight.length; ++i)
 		{
 			if (getHeight(x, y) >= textureMinHeight && getHeight(x, y) <= textueByHeight[i].upperHeightLimit)
 			{
@@ -493,7 +493,7 @@ RMS.SetProgress(90);
 // Place players and start resources
 ////////
 
-for (var p = 0; p < numPlayers; p++)
+for (var p = 0; p < numPlayers; ++p)
 {
 	var actualX = possibleStartPositions[bestDerivation[p]][0];
 	var actualY = possibleStartPositions[bestDerivation[p]][1];
@@ -505,7 +505,7 @@ for (var p = 0; p < numPlayers; p++)
 	{
 		var uAngle = BUILDING_ANGlE - PI * (2-j) / 2;
 		var count = 4;
-		for (var numberofentities = 0; numberofentities < count; numberofentities++)
+		for (var numberofentities = 0; numberofentities < count; ++numberofentities)
 		{
 			var ux = actualX + uDist * cos(uAngle) + numberofentities * uSpace * cos(uAngle + PI/2) - (0.75 * uSpace * floor(count / 2) * cos(uAngle + PI/2));
 			var uz = actualY + uDist * sin(uAngle) + numberofentities * uSpace * sin(uAngle + PI/2) - (0.75 * uSpace * floor(count / 2) * sin(uAngle + PI/2));
@@ -527,7 +527,7 @@ timeArray.push(new Date().getTime());
 // Calculate progress percentage with the time checks
 var generationTime = timeArray[timeArray.length - 1] - timeArray[0];
 log("Total generation time (ms): " + generationTime);
-for (var i = 0; i < timeArray.length; i++)
+for (var i = 0; i < timeArray.length; ++i)
 {
 	var timeSinceStart = timeArray[i] - timeArray[0];
 	var progressPercentage = 100 * timeSinceStart / generationTime;

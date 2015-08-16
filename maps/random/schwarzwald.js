@@ -159,8 +159,8 @@ HeightPlacer.prototype.place = function (constraint) {
 	constraint = (constraint || new NullConstraint());
 	
     var ret = [];
-    for (var x = 0; x < g_Map.size; x++) {
-        for (var y = 0; y < g_Map.size; y++) {
+    for (var x = 0; x < g_Map.size; ++x) {
+        for (var y = 0; y < g_Map.size; ++y) {
             if (g_Map.height[x][y] >= this.lowerBound && g_Map.height[x][y] <= this.upperBound && constraint.allows(x, y)) {
                 ret.push(new PointXZ(x, y));
             }
@@ -179,7 +179,7 @@ function getOrderOfPointsForShortestClosePath(points)
 	var distances = [];
 	if (points.length <= 3)
 	{
-		for (var i = 0; i < points.length; i++)
+		for (var i = 0; i < points.length; ++i)
 			order.push(i);
 		
 		return order;
@@ -187,7 +187,7 @@ function getOrderOfPointsForShortestClosePath(points)
 	
 	// Just add the first 3 points
 	var pointsToAdd = deepcopy(points);
-	for (var i = 0; i < min(points.length, 3); i++)
+	for (var i = 0; i < min(points.length, 3); i)
 	{
 		order.push(i);
 		pointsToAdd.shift(i);
@@ -198,13 +198,13 @@ function getOrderOfPointsForShortestClosePath(points)
 	
 	// Add remaining points so the path lengthens the least
 	var numPointsToAdd = pointsToAdd.length;
-	for (var i = 0; i < numPointsToAdd; i++)
+	for (var i = 0; i < numPointsToAdd; ++i)
 	{
 		var indexToAddTo = undefined;
 		var minEnlengthen = Infinity;
 		var minDist1 = 0;
 		var minDist2 = 0;
-		for (var k = 0; k < order.length; k++)
+		for (var k = 0; k < order.length; ++k)
 		{
 			var dist1 = getDistance(pointsToAdd[0][0], pointsToAdd[0][1], points[order[k]][0], points[order[k]][1]);
 			var dist2 = getDistance(pointsToAdd[0][0], pointsToAdd[0][1], points[order[(k + 1) % order.length]][0], points[order[(k + 1) % order.length]][1]);
@@ -238,9 +238,9 @@ function getMinAndMaxHeight(reliefmap)
 	var height = {};
 	height.min = Infinity;
 	height.max = - Infinity;
-	for (var x = 0; x < reliefmap.length; x++)
+	for (var x = 0; x < reliefmap.length; ++x)
 	{
-		for (var y = 0; y < reliefmap[x].length; y++)
+		for (var y = 0; y < reliefmap[x].length; ++y)
 		{
 			if (reliefmap[x][y] < height.min)
 				height.min = reliefmap[x][y];
@@ -260,8 +260,8 @@ function rescaleHeightmap(minHeight, maxHeight, heightmap)
 	var oldHeightRange = getMinAndMaxHeight(heightmap);
 	var max_x = heightmap.length;
 	var max_y = heightmap[0].length;
-	for (var x = 0; x < max_x; x++)
-		for (var y = 0; y < max_y; y++)
+	for (var x = 0; x < max_x; ++x)
+		for (var y = 0; y < max_y; ++y)
 			heightmap[x][y] = minHeight + (heightmap[x][y] - oldHeightRange.min) / (oldHeightRange.max - oldHeightRange.min) * (maxHeight - minHeight);
 }
 
@@ -284,21 +284,21 @@ function getStartLocationsByHeightmap(hightRange, maxTries, minDistToBorder, num
 	heightmap = (heightmap || g_Map.height);
 	
 	var validStartLocTiles = [];
-	for (var x = minDistToBorder; x < heightmap.length - minDistToBorder; x++)
-		for (var y = minDistToBorder; y < heightmap[0].length - minDistToBorder; y++)
+	for (var x = minDistToBorder; x < heightmap.length - minDistToBorder; ++x)
+		for (var y = minDistToBorder; y < heightmap[0].length - minDistToBorder; ++y)
 			if (heightmap[x][y] > hightRange.min && heightmap[x][y] < hightRange.max) // Has the right hight
 				validStartLocTiles.push([x, y]);
 	
 	var maxMinDist = 0;
-	for (var tries = 0; tries < maxTries; tries++)
+	for (var tries = 0; tries < maxTries; ++tries)
 	{
 		var startLoc = [];
 		var minDist = heightmap.length;
-		for (var p = 0; p < numberOfPlayers; p++)
+		for (var p = 0; p < numberOfPlayers; ++p)
 			startLoc.push(validStartLocTiles[randInt(validStartLocTiles.length)]);
-		for (var p1 = 0; p1 < numberOfPlayers - 1; p1++)
+		for (var p1 = 0; p1 < numberOfPlayers - 1; ++p1)
 		{
-			for (var p2 = p1 + 1; p2 < numberOfPlayers; p2++)
+			for (var p2 = p1 + 1; p2 < numberOfPlayers; ++p2)
 			{
 				var dist = getDistance(startLoc[p1][0], startLoc[p1][1], startLoc[p2][0], startLoc[p2][1]);
 				if (dist < minDist)
@@ -336,19 +336,19 @@ function derivateEntitiesByHeight(hightRange, startLoc, entityList, maxTries, mi
 	
 	var placements = deepcopy(startLoc);
 	var validTiles = [];
-	for (var x = minDistance; x < heightmap.length - minDistance; x++)
-		for (var y = minDistance; y < heightmap[0].length - minDistance; y++)
+	for (var x = minDistance; x < heightmap.length - minDistance; ++x)
+		for (var y = minDistance; y < heightmap[0].length - minDistance; ++y)
 			if (heightmap[x][y] > hightRange.min && heightmap[x][y] < hightRange.max) // Has the right hight
 				validTiles.push([x, y]);
 	
 	if (!validTiles.length)
 		return;
 	
-	for (var tries = 0; tries < maxTries; tries++)
+	for (var tries = 0; tries < maxTries; ++tries)
 	{
 		var tile = validTiles[randInt(validTiles.length)];
 		var isValid = true;
-		for (var p = 0; p < placements.length; p++)
+		for (var p = 0; p < placements.length; ++p)
 		{
 			if (getDistance(placements[p][0], placements[p][1], tile[0], tile[1]) < minDistance)
 			{
@@ -391,10 +391,10 @@ function setBaseTerrainDiamondSquare(minHeight, maxHeight, smoothness, initialHe
 		var newHeightmap = [];
 		var oldWidth = initialHeightmap.length;
 		// Square
-		for (var x = 0; x < 2 * oldWidth - 1; x++)
+		for (var x = 0; x < 2 * oldWidth - 1; ++x)
 		{
 			newHeightmap.push([]);
-			for (var y = 0; y < 2 * oldWidth - 1; y++)
+			for (var y = 0; y < 2 * oldWidth - 1; ++y)
 			{
 				if (x % 2 === 0 && y % 2 === 0) // Old tile
 					newHeightmap[x].push(initialHeightmap[x/2][y/2]);
@@ -408,9 +408,9 @@ function setBaseTerrainDiamondSquare(minHeight, maxHeight, smoothness, initialHe
 			}
 		}
 		// Diamond
-		for (var x = 0; x < 2 * oldWidth - 1; x++)
+		for (var x = 0; x < 2 * oldWidth - 1; ++x)
 		{
-			for (var y = 0; y < 2 * oldWidth - 1; y++)
+			for (var y = 0; y < 2 * oldWidth - 1; ++y)
 			{
 				if (newHeightmap[x][y] === undefined)
 				{
@@ -448,8 +448,8 @@ function setBaseTerrainDiamondSquare(minHeight, maxHeight, smoothness, initialHe
 	
 	// Cut initialHeightmap to fit target width
 	var shift = [floor((newHeightmap.length - heightmap.length) / 2), floor((newHeightmap[0].length - heightmap[0].length) / 2)];
-	for (var x = 0; x < heightmap.length; x++)
-		for (var y = 0; y < heightmap[0].length; y++)
+	for (var x = 0; x < heightmap.length; ++x)
+		for (var y = 0; y < heightmap[0].length; ++y)
 			heightmap[x][y] = newHeightmap[x][y];
 }
 
@@ -470,9 +470,9 @@ function decayErrodeHeightmap(strength, heightmap)
 	var map = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]]; // smoother
 	var max_x = heightmap.length;
 	var max_y = heightmap[0].length;
-	for (var x = 0; x < max_x; x++)
-		for (var y = 0; y < max_y; y++)
-			for (var i = 0; i < map.length; i++)
+	for (var x = 0; x < max_x; ++x)
+		for (var y = 0; y < max_y; ++y)
+			for (var i = 0; i < map.length; ++i)
 				heightmap[x][y] += strength / map.length * (referenceHeightmap[(x + map[i][0] + max_x) % max_x][(y + map[i][1] + max_y) % max_y] - referenceHeightmap[x][y]); // Not entirely sure if scaling with map.length is perfect but tested values seam to indicate it is
 }
 
@@ -486,10 +486,10 @@ function rectangularSmoothToHeight(center, dx, dy, targetHeight, strength, heigh
 	heightmap = (heightmap || g_Map.height);
 	
 	var heightmapWin = [];
-	for (var wx = 0; wx < 2 * dx + 1; wx++)
+	for (var wx = 0; wx < 2 * dx + 1; ++wx)
 	{
 		heightmapWin.push([]);
-		for (var wy = 0; wy < 2 * dy + 1; wy++)
+		for (var wy = 0; wy < 2 * dy + 1; ++wy)
 		{
 			var actualX = x - dx + wx;
 			var actualY = y - dy + wy;
@@ -499,9 +499,9 @@ function rectangularSmoothToHeight(center, dx, dy, targetHeight, strength, heigh
 				heightmapWin[wx].push(targetHeight);
 		}
 	}
-	for (var wx = 0; wx < 2 * dx + 1; wx++)
+	for (var wx = 0; wx < 2 * dx + 1; ++wx)
 	{
-		for (var wy = 0; wy < 2 * dy + 1; wy++)
+		for (var wy = 0; wy < 2 * dy + 1; ++wy)
 		{
 			var actualX = x - dx + wx;
 			var actualY = y - dy + wy;
@@ -546,7 +546,7 @@ var initialReliefmap = [[heightRange.max, heightRange.max, heightRange.max], [he
 
 setBaseTerrainDiamondSquare(heightRange.min, heightRange.max, 0.5, initialReliefmap, g_Map.height);
 // Apply simple erosion
-for (var i = 0; i < 5; i++)
+for (var i = 0; i < 5; ++i)
 	decayErrodeHeightmap(0.5);
 rescaleHeightmap(heightRange.min, heightRange.max);
 
@@ -578,7 +578,7 @@ var heighLimits = [
 var startLocations = getStartLocationsByHeightmap({'min': heighLimits[4], 'max': heighLimits[5]});
 var playerHeight = (heighLimits[4] + heighLimits[5]) / 2;
 
-for (var i=0; i < numPlayers; i++)
+for (var i=0; i < numPlayers; ++i)
 {
 	playerAngle[i] = (playerAngleStart + i*playerAngleAddAvrg + randFloat(0, playerAngleMaxOff))%(2*PI);
 	var x = round(mapCenterX + randFloat(minPlayerRadius, maxPlayerRadius)*cos(playerAngle[i]));
@@ -600,7 +600,7 @@ for (var i=0; i < numPlayers; i++)
 	var distToSL = 15;
 	var resStartAngle = playerAngle[i] + PI;
 	var resAddAngle = 2*PI / startingResources.length;
-	for (var rIndex = 0; rIndex < startingResources.length; rIndex++)
+	for (var rIndex = 0; rIndex < startingResources.length; ++rIndex)
 	{
 		var angleOff = randFloat(-resAddAngle/2, resAddAngle/2);
 		var placeX = x + distToSL*cos(resStartAngle + rIndex*resAddAngle + angleOff);
@@ -640,13 +640,13 @@ if (doublePaths === true)
 	var maxI = numPlayers+1;
 else
 	var maxI = numPlayers;
-for (var i = 0; i < maxI; i++)
+for (var i = 0; i < maxI; ++i)
 {
 	if (doublePaths === true)
 		var minJ = 0;
 	else
 		var minJ = i+1;
-	for (var j = minJ; j < numPlayers+1; j++)
+	for (var j = minJ; j < numPlayers+1; ++j)
 	{
 		// Setup start and target coordinates
 		if (i < numPlayers)
@@ -696,7 +696,7 @@ for (var i = 0; i < maxI; i++)
 			}
 			if (getDistance(x, z, targetX, targetZ) < pathSucsessRadius)
 				targetReached = true;
-			tries++;
+			++tries;
 
 		}
 	}
@@ -757,14 +757,14 @@ RMS.SetProgress(90);
 
 // place trees
 log("Planting trees...");
-for (var x = 0; x < mapSize; x++)
+for (var x = 0; x < mapSize; ++x)
 {
-	for (var z = 0;z < mapSize;z++)
+	for (var z = 0; z < mapSize; ++z)
 	{
 		// Some variables
 		var radius = Math.pow(Math.pow(mapCenterX - x - 0.5, 2) + Math.pow(mapCenterZ - z - 0.5, 2), 1/2); // The 0.5 is a correction for the entities placed on the center of tiles
 		var minDistToSL = mapSize;
-		for (var i=0; i < numPlayers; i++)
+		for (var i=0; i < numPlayers; ++i)
 			minDistToSL = min(minDistToSL, getDistance(playerStartLocX[i], playerStartLocZ[i], x, z));
 		// Woods tile based
 		var tDensFactSL = max(min((minDistToSL - baseRadius) / baseRadius, 1), 0);

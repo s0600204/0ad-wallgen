@@ -113,7 +113,7 @@ function argsToArray(x)
 	if (numArgs != 1)
 	{
 		var ret = new Array(numArgs);
-		for (var i=0; i < numArgs; i++)
+		for (var i=0; i < numArgs; ++i)
 		{
 			ret[i] = x[i];
 		}
@@ -142,7 +142,7 @@ function shuffleArray(source)
 		return [];
 
 	var result = [source[0]];
-	for (var i = 1; i < source.length; i++)
+	for (var i = 1; i < source.length; ++i)
 	{
 		var j = randInt(0, i);
 		result[i] = result[j];
@@ -182,12 +182,12 @@ function createAreas(centeredPlacer, painter, constraint, num, retryFactor)
 		var area = g_Map.createArea(centeredPlacer, painter, constraint);
 		if (area !== undefined)
 		{
-			good++;
+			++good;
 			result.push(area);
 		}
 		else
 		{
-			bad++;
+			++bad;
 		}
 	}
 	return result;
@@ -218,12 +218,12 @@ function createAreasInAreas(centeredPlacer, painter, constraint, num, retryFacto
 		var area = g_Map.createArea(centeredPlacer, painter, constraint);
 		if (area !== undefined)
 		{
-			good++;
+			++good;
 			result.push(area);
 		}
 		else
 		{
-			bad++;
+			++bad;
 		}
 	}
 	return result;
@@ -258,11 +258,11 @@ function createObjectGroups(placer, player, constraint, num, retryFactor)
 		var result = createObjectGroup(placer, player, constraint);
 		if (result !== undefined)
 		{
-			good++;
+			++good;
 		}
 		else
 		{
-			bad++;
+			++bad;
 		}
 	}
 	return good;
@@ -292,11 +292,11 @@ function createObjectGroupsByAreas(placer, player, constraint, num, retryFactor,
 		var result = createObjectGroup(placer, player, constraint);
 		if (result !== undefined)
 		{
-			good++;
+			++good;
 		}
 		else
 		{
-			bad++;
+			++bad;
 		}
 	}
 	return good;
@@ -446,14 +446,9 @@ function getTemplateValue(entPath, key_list)
 	var subdata = RMS.GetTemplate(entPath);
 	for (var i = 0; i < key_list.length; ++i)
 	{
-		if (key_list[i] in subdata)
-		{
-			subdata = subdata[key_list[i]];
-		}
-		else
-		{
-			return false;
-		}
+		if (!subdata[key_list[i]])
+			{return false};
+		subdata = subdata[key_list[i]];
 	}
 	return subdata;
 }
@@ -462,51 +457,35 @@ function getTemplateValue(entPath, key_list)
 function getTempatePathList(civ)
 {
 	var templatePaths = getFullCivData();
-	if (civ in templatePaths)
+	if (!templatePaths[civ])
 	{
-		templatePaths = templatePaths[civ];
-	}
-	else
-	{
-		var keys = [];
-		for (var key in templatePaths)
-			keys.push(key);
-		warn("getTempatePathList: Unknown civ: " + civ + " not in " + uneval(keys));
+		warn("getTempatePathList: Unknown civ '" + civ + "' not in " + Object.keys(templatePaths));
 		return false;
 	}
-	if (STARTING_ENTITY_KEY in templatePaths)
+	templatePaths = templatePaths[civ];
+	
+	if (!templatePaths[STARTING_ENTITY_KEY])
 	{
-		templatePaths = templatePaths[STARTING_ENTITY_KEY];
-	}
-	else
-	{
-		var keys = [];
-		for (var key in templatePaths)
-			keys.push(key);
-		warn("getTempatePathList: Civ has no starting entities as defined in STARTING_ENTITY_KEY (" + STARTING_ENTITY_KEY + "): " + uneval(keys));
+		warn("getTempatePathList: Civ has no starting entities as defined in STARTING_ENTITY_KEY (" + STARTING_ENTITY_KEY + "): " + Object.keys(templatePaths));
 		return false;
 	}
+	templatePaths = templatePaths[STARTING_ENTITY_KEY];
+	
 	for (var i = 0; i < templatePaths.length; ++i)
 	{
-		if (START_ENTITY_TEMPLATE_PATH_KEY in templatePaths[i])
+		if (!templatePaths[i][START_ENTITY_TEMPLATE_PATH_KEY])
 		{
-			templatePaths[i] = templatePaths[i][START_ENTITY_TEMPLATE_PATH_KEY];
-		}
-		else
-		{
-			var keys = [];
-			for (var key in templatePaths[i])
-				keys.push(key);
-			warn("getTempatePathList: Starting entity list item has no template as defined in START_ENTITY_TEMPLATE_PATH_KEY (" + START_ENTITY_TEMPLATE_PATH_KEY + "): " + uneval(keys));
+			warn("getTempatePathList: Starting entity list item has no template as defined in START_ENTITY_TEMPLATE_PATH_KEY (" + START_ENTITY_TEMPLATE_PATH_KEY + "): " + Object.keys(templatePaths));
 			return false;
 		}
+		templatePaths[i] = templatePaths[i][START_ENTITY_TEMPLATE_PATH_KEY];
 	}
 	var foundNew = 1;
 	while (foundNew > 0)
 	{
 		foundNew = 0;
 		var methods = [BUILDER_TEMPLATEPATH_KEYS, PRODUCTION_TEMPLATEPATH_KEYS];
-		for (var m = 0; m < methods.length; m++)
+		for (var m = 0; m < methods.length; ++m)
 		{
 			for (var t = 0; t < templatePaths.length; ++t)
 			{
@@ -520,7 +499,7 @@ function getTempatePathList(civ)
 						if (templatePaths.indexOf(actualPath) == -1 && RMS.TemplateExists(actualPath))
 						{
 							templatePaths.push(actualPath);
-							foundNew++;
+							++foundNew;
 						}
 					}
 				}
@@ -561,14 +540,14 @@ function sortPlayers(source)
 
 	var result = new Array(0);
 	var team = new Array(5);
-	for (var q = 0; q < 5; q++)
+	for (var q = 0; q < 5; ++q)
 	{
 		team[q] = new Array(1);
 	}
 
-	for (var i = -1; i < 4; i++)
+	for (var i = -1; i < 4; ++i)
 	{
-		for (var j = 0; j < source.length; j++)
+		for (var j = 0; j < source.length; ++j)
 		{
 			if (getPlayerTeam(j) == i)
 			{
@@ -588,7 +567,7 @@ function primeSortPlayers(source)
 
 	var prime = new Array(source.length);
 
-	for (var i = 0; i < round(source.length/2); i++)
+	for (var i = 0; i < round(source.length/2); ++i)
 	{
 		prime[2*i]=source[i];
 		prime[2*i+1]=source[source.length-1-i];
@@ -662,7 +641,7 @@ function unPaintClass(id)
 function avoidClasses(/*class1, dist1, class2, dist2, etc*/)
 {
 	var ar = new Array(arguments.length/2);
-	for (var i = 0; i < arguments.length/2; i++)
+	for (var i = 0; i < arguments.length/2; ++i)
 	{
 		ar[i] = new AvoidTileClassConstraint(arguments[2*i], arguments[2*i+1]);
 	}
@@ -682,7 +661,7 @@ function avoidClasses(/*class1, dist1, class2, dist2, etc*/)
 function stayClasses(/*class1, dist1, class2, dist2, etc*/)
 {
 	var ar = new Array(arguments.length/2);
-	for (var i = 0; i < arguments.length/2; i++)
+	for (var i = 0; i < arguments.length/2; ++i)
 	{
 		ar[i] = new StayInTileClassConstraint(arguments[2*i], arguments[2*i+1]);
 	}
@@ -702,7 +681,7 @@ function stayClasses(/*class1, dist1, class2, dist2, etc*/)
 function borderClasses(/*class1, idist1, odist1, class2, idist2, odist2, etc*/)
 {
 	var ar = new Array(arguments.length/3);
-	for (var i = 0; i < arguments.length/3; i++)
+	for (var i = 0; i < arguments.length/3; ++i)
 	{
 		ar[i] = new BorderTileClassConstraint(arguments[3*i], arguments[3*i+1], arguments[3*i+2]);
 	}
@@ -769,4 +748,3 @@ function getTerrainTexture(x, y)
 {
 	return g_Map.getTexture(x, y);
 }
-

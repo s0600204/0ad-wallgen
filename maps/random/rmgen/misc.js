@@ -20,9 +20,9 @@ function passageMaker(x1, z1, x2, z2, width, maxheight, height, smooth, tileclas
 	var tchm = TILE_CENTERED_HEIGHT_MAP;
 	TILE_CENTERED_HEIGHT_MAP = true;
 	var mapSize = g_Map.size;
-	for (var ix = 0; ix < mapSize; ix++)
+	for (var ix = 0; ix < mapSize; ++ix)
 	{
-		for (var iz = 0; iz < mapSize; iz++)
+		for (var iz = 0; iz < mapSize; ++iz)
 		{
 			var a = z1-z2;
 			var b = x2-x1;
@@ -92,7 +92,7 @@ function rndRiver(f, seed)
 	var rndRe = 0;
 	var rndRr = f-floor(f);
 	var rndRa = 0;
-	for (var rndRx=0; rndRx<=floor(f); rndRx++)
+	for (var rndRx=0; rndRx<=floor(f); ++rndRx)
 	{
 		rndRw = 10*(rndRw-floor(rndRw));
 	}
@@ -148,7 +148,7 @@ function createStartingPlayerEntities(fx, fz, playerid, civEntities, BUILDING_AN
 	{
 		var uAngle = BUILDING_ANGlE - PI * (2-j) / 2;
 		var count = (civEntities[j].Count !== undefined ? civEntities[j].Count : 1);
-		for (var numberofentities = 0; numberofentities < count; numberofentities++)
+		for (var numberofentities = 0; numberofentities < count; ++numberofentities)
 		{
 			var ux = fx + uDist * cos(uAngle) + numberofentities * uSpace * cos(uAngle + PI/2) - (0.75 * uSpace * floor(count / 2) * cos(uAngle + PI/2));
 			var uz = fz + uDist * sin(uAngle) + numberofentities * uSpace * sin(uAngle + PI/2) - (0.75 * uSpace * floor(count / 2) * sin(uAngle + PI/2));
@@ -187,7 +187,7 @@ function placeCivDefaultEntities(fx, fz, playerid, angle, kwargs)
 	{
 		var uAngle = angle - PI * (2-j) / 2;
 		var count = (civEntities[j].Count !== undefined ? civEntities[j].Count : 1);
-		for (var numberofentities = 0; numberofentities < count; numberofentities++)
+		for (var numberofentities = 0; numberofentities < count; ++numberofentities)
 		{
 			var ux = fx + uDist * cos(uAngle) + numberofentities * uSpace * cos(uAngle + PI/2) - (0.75 * uSpace * floor(count / 2) * cos(uAngle + PI/2));
 			var uz = fz + uDist * sin(uAngle) + numberofentities * uSpace * sin(uAngle + PI/2) - (0.75 * uSpace * floor(count / 2) * sin(uAngle + PI/2));
@@ -221,9 +221,9 @@ function placeCivDefaultEntities(fx, fz, playerid, angle, kwargs)
 function paintTerrainBasedOnHeight(minheight, maxheight, mode, terrain)
 {
 	var mSize = g_Map.size;
-	for (var qx = 0; qx < mSize; qx++)
+	for (var qx = 0; qx < mSize; ++qx)
 	{
-		for (var qz = 0; qz < mSize; qz++)
+		for (var qz = 0; qz < mSize; ++qz)
 		{
 			if (mode == 0)
 			{
@@ -273,9 +273,9 @@ function paintTerrainBasedOnHeight(minheight, maxheight, mode, terrain)
 function paintTileClassBasedOnHeight(minheight, maxheight, mode, tileclass)
 {
 	var mSize = g_Map.size;
-	for (var qx = 0; qx < mSize; qx++)
+	for (var qx = 0; qx < mSize; ++qx)
 	{
-		for (var qz = 0; qz < mSize; qz++)
+		for (var qz = 0; qz < mSize; ++qz)
 		{
 			if (mode == 0)
 			{
@@ -313,9 +313,9 @@ function paintTileClassBasedOnHeight(minheight, maxheight, mode, tileclass)
 function unPaintTileClassBasedOnHeight(minheight, maxheight, mode, tileclass)
 {
 	var mSize = g_Map.size;
-	for (var qx = 0; qx < mSize; qx++)
+	for (var qx = 0; qx < mSize; ++qx)
 	{
-		for (var qz = 0; qz < mSize; qz++)
+		for (var qz = 0; qz < mSize; ++qz)
 		{
 			if (mode == 0)
 			{
@@ -617,7 +617,7 @@ function createMountain(maxHeight, minRadius, maxRadius, numCircles, constraint,
 		
 		for (var ix = sx; ix <= lx; ++ix)
 		{
-			for (var iz = sz; iz <= lz; ++ iz)
+			for (var iz = sz; iz <= lz; ++iz)
 			{
 				dx = ix - cx;
 				dz = iz - cz;
@@ -666,7 +666,7 @@ function createMountain(maxHeight, minRadius, maxRadius, numCircles, constraint,
 		
 		for (var ix = sx; ix <= lx; ++ix)
 		{
-			for (var iz = sz; iz <= lz; ++ iz)
+			for (var iz = sz; iz <= lz; ++iz)
 			{
 				if (fcc)
 					if ((x - ix) > fcc || (ix - x) > fcc || (z - iz) > fcc || (iz - z) > fcc)
@@ -737,7 +737,7 @@ function createMountain(maxHeight, minRadius, maxRadius, numCircles, constraint,
 		
 		for (var ix = sx; ix <= lx; ++ix)
 		{
-			for (var iz = sz; iz <= lz; ++ iz)
+			for (var iz = sz; iz <= lz; ++iz)
 			{
 				dx = ix - cx;
 				dz = iz - cz;
