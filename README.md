@@ -33,9 +33,9 @@ Additional, legacy wall segments:
  * `entryTower` (creates a non-blocking space in the wall with a `defense_tower` offset in front)
  * `entryFort` (creates a non-blocking space in the wall with a `fortress` offset behind)
 
-You can create a non-blocking gap by using `gap_{}` where `{}` is an integer number.
+You can create a non-blocking gap by using `gap{x}` where `{x}` is an integer number.
 
-You can turn abruptly by using `turn_{}` where `{}` is an integer number.
+You can turn abruptly by using `turn{s}` where `{s}` is either `out` or `in`, (`{s}` is case insensitive).
 
 You can place any building a civ has besides the wall by simply stating its name (`house`, `barracks`, `apadana`, etc.)
  
