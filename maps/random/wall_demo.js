@@ -67,7 +67,7 @@ var wallStyleList = g_WallStyleList;
 // Custom wall placement (element based)
 ////////////////////////////////////////
 var wall = ['start', 'long', 'tower', 'tower', 'tower', 'medium', 'outpost', 'medium', 'cornerOut', 'medium', 'cornerIn', 'medium', 'house', 'end', 'entryTower', 'start', 'short', 'barracks', 'gate', 'tower', 'medium', 'fort', 'medium', 'end'];
-for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
+for (var styleIndex = 0; styleIndex < wallStyleList.length; ++styleIndex)
 {
 	var startX = actualX + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the first wall element
 	var startY = actualY; // Y coordinate of the first wall element
@@ -85,7 +85,7 @@ actualY += 80 + distToOtherWalls; // Increase actualY for next wall placement me
 // Default fortress placement (chosen by fortress type string)
 //////////////////////////////////////////////////////////////
 var fortressRadius = 15; // The space the fortresses take in average. Just for design of this map
-for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
+for (var styleIndex = 0; styleIndex < wallStyleList.length; ++styleIndex)
 {
 	var centerX = actualX + fortressRadius + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the center of the fortress
 	var centerY = actualY + fortressRadius; // Y coordinate of the center of the fortress
@@ -103,7 +103,7 @@ actualY += 2 * fortressRadius + distToOtherWalls; // Increase actualY for next w
 // 'generic' fortress placement (iberian wall circuit code)
 //////////////////////////////////////////////////////////////
 var radius = min((mapSize - actualY - distToOtherWalls) / 3, (buildableMapSize / wallStyleList.length - distToOtherWalls) / 2); // The radius of wall circle
-for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
+for (var styleIndex = 0; styleIndex < wallStyleList.length; ++styleIndex)
 {
 	var centerX = actualX + radius + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the center of the fortress
 	var centerY = actualY + radius; // Y coordinate of the center of the fortress
@@ -122,7 +122,7 @@ actualY += 2 * radius + distToOtherWalls; // Increase actualY for next wall plac
 var radius = min((mapSize - actualY - distToOtherWalls) / 3, (buildableMapSize / wallStyleList.length - distToOtherWalls) / 2); // The radius of wall circle
 var centerY = actualY + radius; // Y coordinate of the center of the wall circle
 var orientation = 0; // Where the wall circle will be open if maxAngle < 2*PI, see below. Otherwise where the first wall element will be placed
-for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
+for (var styleIndex = 0; styleIndex < wallStyleList.length; ++styleIndex)
 {
 	var centerX = actualX + radius + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the center of the wall circle
 	var playerId = 0; // Player ID of the player owning the wall, 0 is Gaia, 1 is the first player (default blue), ...
@@ -143,7 +143,7 @@ actualY += 2 * radius + distToOtherWalls; // Increase actualY for next wall plac
 var radius = min((mapSize - actualY - distToOtherWalls) / 2, (buildableMapSize / wallStyleList.length - distToOtherWalls) / 2); // The radius of wall polygons
 var centerY = actualY + radius; // Y coordinate of the center of the wall polygon
 var orientation = 0; // Where the wall circle will be open if ???, see below. Otherwise where the first wall will be placed
-for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
+for (var styleIndex = 0; styleIndex < wallStyleList.length; ++styleIndex)
 {
 	var centerX = actualX + radius + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the center of the wall circle
 	var playerId = 0; // Player ID of the player owning the wall, 0 is Gaia, 1 is the first player (default blue), ...
@@ -166,7 +166,7 @@ actualY += 2 * radius + distToOtherWalls; // Increase actualY for next wall plac
 var radius = min((mapSize - actualY - distToOtherWalls) / 2, (buildableMapSize / wallStyleList.length - distToOtherWalls) / 2); // The radius of wall polygons
 var centerY = actualY + radius; // Y coordinate of the center of the wall polygon
 var orientation = 0; // Where the wall circle will be open if ???, see below. Otherwise where the first wall will be placed
-for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
+for (var styleIndex = 0; styleIndex < wallStyleList.length; ++styleIndex)
 {
 	var centerX = actualX + radius + styleIndex * buildableMapSize/wallStyleList.length; // X coordinate of the center of the wall circle
 	var playerId = 0; // Player ID of the player owning the wall, 0 is Gaia, 1 is the first player (default blue), ...
@@ -188,9 +188,9 @@ actualY += 2 * radius + distToOtherWalls; // Increase actualY for next wall plac
 // NOTE: Don't use bending wall elements like corners here!
 var maxWallLength = (mapSize - actualY - distToMapBorder - distToOtherWalls); // Just for this maps design. How long the longest wall will be
 var numWallsPerStyle = floor(buildableMapSize / distToOtherWalls / wallStyleList.length); // Just for this maps design. How many walls of the same style will be placed
-for (var styleIndex = 0; styleIndex < wallStyleList.length; styleIndex++)
+for (var styleIndex = 0; styleIndex < wallStyleList.length; ++styleIndex)
 {
-	for (var wallIndex = 0; wallIndex < numWallsPerStyle; wallIndex++)
+	for (var wallIndex = 0; wallIndex < numWallsPerStyle; ++wallIndex)
 	{
 		var startX = actualX + (styleIndex * numWallsPerStyle + wallIndex) * buildableMapSize/wallStyleList.length/numWallsPerStyle; // X coordinate the wall will start from
 		var startY = actualY; // Y coordinate the wall will start from

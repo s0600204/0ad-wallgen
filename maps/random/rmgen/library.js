@@ -420,7 +420,7 @@ function getFullCivData()
 {
 	var rawCivData = RMS.GetCivData();
 	var unpackedCivData = {};
-	for (var i = 0; i < rawCivData.length; i++)
+	for (var i = 0; i < rawCivData.length; ++i)
 	{
 		var singleCivData = JSON.parse(rawCivData[i]);
 		unpackedCivData[singleCivData.Code] = singleCivData;
@@ -444,7 +444,7 @@ function getCivCode(player)
 function getTemplateValue(entPath, key_list)
 {
 	var subdata = RMS.GetTemplate(entPath);
-	for (var i = 0; i < key_list.length; i++)
+	for (var i = 0; i < key_list.length; ++i)
 	{
 		if (key_list[i] in subdata)
 		{
@@ -486,7 +486,7 @@ function getTempatePathList(civ)
 		warn("getTempatePathList: Civ has no starting entities as defined in STARTING_ENTITY_KEY (" + STARTING_ENTITY_KEY + "): " + uneval(keys));
 		return false;
 	}
-	for (var i = 0; i < templatePaths.length; i++)
+	for (var i = 0; i < templatePaths.length; ++i)
 	{
 		if (START_ENTITY_TEMPLATE_PATH_KEY in templatePaths[i])
 		{
@@ -508,13 +508,13 @@ function getTempatePathList(civ)
 		var methods = [BUILDER_TEMPLATEPATH_KEYS, PRODUCTION_TEMPLATEPATH_KEYS];
 		for (var m = 0; m < methods.length; m++)
 		{
-			for (var t = 0; t < templatePaths.length; t++)
+			for (var t = 0; t < templatePaths.length; ++t)
 			{
 				var pathsToCheck = getTemplateValue(templatePaths[t], methods[m]);
 				if (typeof(pathsToCheck) === typeof(""))
 				{
 					pathsToCheck = pathsToCheck.split(/\s+/);
-					for (var c = 0; c < pathsToCheck.length; c++)
+					for (var c = 0; c < pathsToCheck.length; ++c)
 					{
 						var actualPath = pathsToCheck[c].replace(CIV_PLACEHOLDER_STRING, civ);
 						if (templatePaths.indexOf(actualPath) == -1 && RMS.TemplateExists(actualPath))
